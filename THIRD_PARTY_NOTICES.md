@@ -99,6 +99,8 @@ The table includes all packages in package-lock.json, including development tool
 | @tauri-apps/cli-win32-arm64-msvc | 2.12.1 | Apache-2.0 OR MIT |
 | @tauri-apps/cli-win32-ia32-msvc | 2.12.1 | Apache-2.0 OR MIT |
 | @tauri-apps/cli-win32-x64-msvc | 2.12.1 | Apache-2.0 OR MIT |
+| @tauri-apps/plugin-process | 2.4.0 | MIT OR Apache-2.0 |
+| @tauri-apps/plugin-updater | 2.13.1 | MIT OR Apache-2.0 |
 | @types/babel__core | 7.20.5 | MIT |
 | @types/babel__generator | 7.27.0 | MIT |
 | @types/babel__template | 7.4.4 | MIT |
@@ -297,6 +299,7 @@ This table is generated from Cargo.lock and Cargo metadata for `x86_64-pc-window
 | markup5ever | 0.39.0 | MIT OR Apache-2.0 |
 | memchr | 2.8.3 | Unlicense OR MIT |
 | mime | 0.3.17 | MIT OR Apache-2.0 |
+| minisign-verify | 0.2.5 | MIT |
 | miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 |
 | mio | 1.2.3 | MIT |
@@ -337,11 +340,13 @@ This table is generated from Cargo.lock and Cargo metadata for `x86_64-pc-window
 | regex-automata | 0.4.18 | MIT OR Apache-2.0 |
 | regex-syntax | 0.8.11 | MIT OR Apache-2.0 |
 | reqwest | 0.12.28 | MIT OR Apache-2.0 |
+| reqwest | 0.13.5 | MIT OR Apache-2.0 |
 | ring | 0.17.14 | Apache-2.0 AND ISC |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT |
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 |
 | rustls | 0.23.45 | Apache-2.0 OR ISC OR MIT |
 | rustls-pki-types | 1.15.1 | MIT OR Apache-2.0 |
+| rustls-platform-verifier | 0.7.1 | MIT OR Apache-2.0 |
 | rustls-webpki | 0.103.15 | ISC |
 | ryu | 1.0.23 | Apache-2.0 OR BSL-1.0 |
 | same-file | 1.0.6 | Unlicense/MIT |
@@ -388,7 +393,10 @@ This table is generated from Cargo.lock and Cargo metadata for `x86_64-pc-window
 | tauri-build | 2.7.1 | Apache-2.0 OR MIT |
 | tauri-codegen | 2.7.1 | Apache-2.0 OR MIT |
 | tauri-macros | 2.7.1 | Apache-2.0 OR MIT |
+| tauri-plugin | 2.7.1 | Apache-2.0 OR MIT |
+| tauri-plugin-process | 2.4.0 | Apache-2.0 OR MIT |
 | tauri-plugin-single-instance | 2.5.2 | Apache-2.0 OR MIT |
+| tauri-plugin-updater | 2.13.1 | Apache-2.0 OR MIT |
 | tauri-runtime | 2.12.1 | Apache-2.0 OR MIT |
 | tauri-runtime-wry | 2.12.1 | Apache-2.0 OR MIT |
 | tauri-utils | 2.10.1 | Apache-2.0 OR MIT |
@@ -404,6 +412,7 @@ This table is generated from Cargo.lock and Cargo metadata for `x86_64-pc-window
 | tinyvec | 1.13.3 | Zlib OR Apache-2.0 OR MIT |
 | tokio | 1.53.1 | MIT |
 | tokio-rustls | 0.26.6 | MIT OR Apache-2.0 |
+| tokio-util | 0.7.19 | MIT |
 | toml | 1.1.6+spec-1.1.0 | MIT OR Apache-2.0 |
 | toml_datetime | 1.1.1+spec-1.1.0 | MIT OR Apache-2.0 |
 | toml_parser | 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 |
@@ -447,6 +456,7 @@ This table is generated from Cargo.lock and Cargo metadata for `x86_64-pc-window
 | windows-interface | 0.59.3 | MIT OR Apache-2.0 |
 | windows-link | 0.2.1 | MIT OR Apache-2.0 |
 | windows-numerics | 0.3.1 | MIT OR Apache-2.0 |
+| windows-registry | 0.6.1 | MIT OR Apache-2.0 |
 | windows-result | 0.4.1 | MIT OR Apache-2.0 |
 | windows-strings | 0.5.1 | MIT OR Apache-2.0 |
 | windows-sys | 0.59.0 | MIT OR Apache-2.0 |
@@ -467,6 +477,7 @@ This table is generated from Cargo.lock and Cargo metadata for `x86_64-pc-window
 | zerotrie | 0.2.5 | Unicode-3.0 |
 | zerovec | 0.11.8 | Unicode-3.0 |
 | zerovec-derive | 0.11.6 | Unicode-3.0 |
+| zip | 4.6.1 | MIT |
 | zlib-rs | 0.6.8 | Zlib |
 | zmij | 1.0.23 | MIT |
 

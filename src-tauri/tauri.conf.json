@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Claude Done",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "identifier": "com.claudedone",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -35,6 +35,19 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "shortDescription": "Claude 环境诊断与可撤销修复工具"
+    "shortDescription": "Claude 环境诊断与可撤销修复工具",
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "requireSignedVersion": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIyNzM2MDhFQUU1REI2QTIKUldTaXRsMnVqbUJ6SWtrUXVkenFUUllKaWZnZDdNL3ErV3BpZ1VudGNSYXlnbGFVVHpjSlRtc3oK",
+      "endpoints": [
+        "https://github.com/claudedone/claudedone/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

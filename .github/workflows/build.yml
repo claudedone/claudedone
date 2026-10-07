@@ -46,12 +46,16 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
-      - if: runner.os == 'Windows'
-        run: npm run tauri build -- --bundles nsis
-      - if: runner.os == 'macOS'
-        run: npm run tauri build -- --bundles dmg
+      - name: Build desktop packages
+        run: node scripts/build-desktop.mjs
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ github.event_name == 'push' && github.ref_type == 'tag' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
       - name: Collect release packages
         run: node scripts/collect-release-assets.mjs ${{ matrix.platform }}
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
       - name: Collect third-party notices
         run: node scripts/collect-release-notices.mjs ${{ matrix.platform }} ${{ matrix.target }}
       - uses: actions/upload-artifact@v4

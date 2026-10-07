@@ -24,10 +24,20 @@ export function packageNames(version) {
   ];
 }
 
+export function updaterAssets(version) {
+  return [
+    `${packageNames(version)[0]}.sig`,
+    `ClaudeDone_${version}_macos_arm64_update.app.tar.gz`,
+    `ClaudeDone_${version}_macos_arm64_update.app.tar.gz.sig`,
+    `ClaudeDone_${version}_macos_x64_update.app.tar.gz`,
+    `ClaudeDone_${version}_macos_x64_update.app.tar.gz.sig`,
+  ];
+}
+
 export function verifyReleaseAssets(directory,version) {
-  const expected=[...packageNames(version),`ClaudeDone_${version}_THIRD_PARTY_NOTICES.tar.gz`].sort();
-  const files=fs.readdirSync(directory).filter(name=>name!=='SHA256SUMS.txt').sort();
-  if(JSON.stringify(files)!==JSON.stringify(expected)) throw new Error('Release must contain all four platform packages and the notice archive, with no unexpected assets');
+  const expected=[...packageNames(version),...updaterAssets(version),`ClaudeDone_${version}_THIRD_PARTY_NOTICES.tar.gz`].sort();
+  const files=fs.readdirSync(directory).filter(name=>!['SHA256SUMS.txt','latest.json'].includes(name)).sort();
+  if(JSON.stringify(files)!==JSON.stringify(expected)) throw new Error('Release must contain all four platform packages, signed updater bundles and the notice archive, with no unexpected assets');
   for(const name of files) {
     const info=fs.lstatSync(path.join(directory,name));
     if(!info.isFile() || info.size===0) throw new Error(`Invalid or empty release asset: ${name}`);

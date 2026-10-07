@@ -10,6 +10,13 @@ const names=packageNames(version);
 const files=platform==='windows-x64'
   ? [[`bundle/nsis/Claude Done_${version}_x64-setup.exe`,names[0]],['claude-done.exe',names[1]]]
   : [[`bundle/dmg/Claude Done_${version}_${platform==='macos-arm64'?'aarch64':'x64'}.dmg`,names[platform==='macos-arm64'?2:3]]];
+if(process.env.RELEASE_TAG) {
+  if(platform==='windows-x64') files.push([`${files[0][0]}.sig`,`${names[0]}.sig`]);
+  else {
+    const name=`ClaudeDone_${version}_${platform.replace('-','_')}_update.app.tar.gz`;
+    files.push(['bundle/macos/Claude Done.app.tar.gz',name],['bundle/macos/Claude Done.app.tar.gz.sig',`${name}.sig`]);
+  }
+}
 const output=path.join(projectRoot,'release-assets');
 fs.mkdirSync(output,{recursive:true});
 for(const [relative,name] of files) {

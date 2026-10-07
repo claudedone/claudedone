@@ -3,16 +3,21 @@ mod engine;
 mod firefox;
 mod fonts;
 mod platform;
-mod updates;
+
+#[tauri::command]
+fn is_portable_build() -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        let exe = std::env::current_exe().map_err(|error| error.to_string())?;
+        Ok(!exe.parent().is_some_and(|folder| folder.join("uninstall.exe").is_file()))
+    }
+    #[cfg(not(windows))]
+    { Ok(false) }
+}
 
 #[tauri::command]
 fn open_telegram_group() -> Result<(), String> {
     platform::open_telegram_group()
-}
-
-#[tauri::command]
-async fn check_for_updates() -> Result<updates::UpdateCheck, String> {
-    updates::check().await
 }
 
 #[tauri::command]
@@ -183,6 +188,8 @@ async fn launch_cli(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -200,7 +207,7 @@ pub fn run() {
             open_timezone_settings,
             get_timezone_catalog,
             open_telegram_group,
-            check_for_updates,
+            is_portable_build,
             open_download_page,
             open_firefox_download,
             get_font_catalog,

@@ -1,15 +1,31 @@
 import { version } from '../package.json';
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import {checkNativeUpdate, installNativeUpdate, restartUpdatedApp, type UpdateCheck, type UpdateProgress} from './app-updater';
+export type {UpdateCheck,UpdateProgress} from './app-updater';
 import { timezoneOffsetLabel, type TimezoneOption, type BrowserId, type CheckId, type Scan, type RepairRecord, type Outcome, type TimezoneTarget } from './domain';
 
 export const native = isTauri();
-export interface UpdateCheck { currentVersion: string; latestVersion: string; available: boolean; supported: boolean; notes: string[]; publishedAt: string; checkedAt: string }
 export async function checkForUpdates(): Promise<UpdateCheck> {
-  if (native) return invoke('check_for_updates');
+  if (native) return {...await checkNativeUpdate(),portable:await invoke<boolean>('is_portable_build')};
   await new Promise(resolve => setTimeout(resolve, 700));
   const preview = import.meta.env.DEV ? new URLSearchParams(location.search).get('updatePreview') : null;
   if (preview === 'offline') throw new Error('演示：连接官网失败，请检查网络后重试。');
   return { currentVersion: version, latestVersion: preview === 'available' ? '0.6.0' : version, available: preview === 'available', supported: preview !== 'unsupported', notes: ['优化环境诊断体验（演示）', '改进浏览器配置兼容性（演示）'], publishedAt: new Date().toISOString(), checkedAt: new Date().toISOString() };
+}
+export async function installAvailableUpdate(onProgress:(progress:UpdateProgress)=>void):Promise<void> {
+  if(native) return installNativeUpdate(onProgress);
+  for(let downloaded=0;downloaded<=100;downloaded+=20) {
+    onProgress({phase:'downloading',downloaded,total:100});
+    await new Promise(resolve=>setTimeout(resolve,200));
+  }
+  onProgress({phase:'verifying',downloaded:100,total:100});
+  await new Promise(resolve=>setTimeout(resolve,400));
+  onProgress({phase:'installing',downloaded:100,total:100});
+  await new Promise(resolve=>setTimeout(resolve,400));
+  onProgress({phase:'ready',downloaded:100,total:100});
+}
+export async function restartAfterUpdate():Promise<void> {
+  if(native) return restartUpdatedApp();
 }
 export async function openDownloadPage(): Promise<void> {
   if (native) return invoke('open_download_page');

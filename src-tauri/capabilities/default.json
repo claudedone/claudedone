@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Local main window only; OS operations use narrowly scoped Rust commands.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "updater:allow-check", "updater:allow-download", "updater:allow-install", "process:allow-restart"]
 }

@@ -3,6 +3,7 @@ import { Activity, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCheck, Chevro
 import { checkCount, defaultTimezoneTarget, definitions, labels, recommendedChecks, repairIds, timezoneChoices, timeLabel, type BrowserId, type CheckId, type Check as EnvironmentCheck, type Outcome, type RepairRecord, type Scan, type TimezoneTarget, type TimezoneOption } from './domain';
 import { parseBrowserReport, withBrowserReport, type BrowserReport } from './browser-report';
 import AppUpdates from './AppUpdates';
+import {version} from '../package.json';
 import TimezonePicker from './TimezonePicker';
 import FirefoxSetup from './FirefoxSetup';
 import { FontReview, FontResult } from './FontDialogs';
@@ -152,14 +153,14 @@ export default function App() {
       <span className="sidebar-label">工作空间</span>
       <nav aria-label="主导航">{nav.map(({ id, title, icon: Icon }) => <button key={id} className={`nav-item ${page === id ? 'active' : ''}`} onClick={() => setPage(id)}><Icon size={18} strokeWidth={1.7} /><span>{title}</span>{id === 'overview' && warnings.length > 0 && <span className="nav-count">{warnings.length}</span>}{id === 'history' && history.filter(r => r.status === 'applied').length > 0 && <span className="nav-history-dot" />}</button>)}</nav>
       <div className="sidebar-separator" /><button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => setPage('settings')}><Settings2 size={18} strokeWidth={1.7} /><span>偏好设置</span></button>
-      <div className="sidebar-bottom"><div className="help-card"><span className="help-icon"><BookOpen size={21} strokeWidth={1.5} /></span><strong>第一次使用？</strong><p>从检测开始，了解每一项<br />设置的作用。</p><button onClick={() => setModal({ kind: 'help' })}>查看使用指南<ArrowUpRight size={14} /></button></div><div className="sidebar-footer"><span className="local-dot" />本地运行<span>v0.5.8</span></div></div>
+      <div className="sidebar-bottom"><div className="help-card"><span className="help-icon"><BookOpen size={21} strokeWidth={1.5} /></span><strong>第一次使用？</strong><p>从检测开始，了解每一项<br />设置的作用。</p><button onClick={() => setModal({ kind: 'help' })}>查看使用指南<ArrowUpRight size={14} /></button></div><div className="sidebar-footer"><span className="local-dot" />本地运行<span>v{version}</span></div></div>
     </aside>
     <main>
       <header className="topbar"><div className="breadcrumb">工作空间<ChevronRight size={12} /><span>{pageText[page][0]}</span></div><div className="topbar-right">{!native && <span className="demo-badge">交互演示 · 不修改电脑</span>}<button className="telegram-group" title="加入 Telegram 群" disabled={!!busy} onClick={() => void perform('正在打开 Telegram 群', openTelegramGroup)}><Send size={14} /><span>Telegram Group</span><ArrowUpRight size={13} /></button><span className="platform-label"><Monitor size={13} />{scan?.platform || '桌面环境'}</span><button className="icon-button" title="使用指南" aria-label="使用指南" onClick={() => setModal({ kind: 'help' })}><CircleHelp size={18} /></button></div></header>
       <div className="main-content">
         <div className="page-heading"><div><h1>{pageText[page][0]}</h1><p>{pageText[page][1]}</p></div><button className="button secondary" disabled={!!busy} onClick={() => perform('正在重新检测', async () => { await refresh(); notify(native ? '检测已更新' : '演示检测已更新'); })}><RefreshCw size={15} className={busy?.includes('检测') ? 'spin' : ''} />{busy?.includes('检测') ? '正在检测' : '重新检测'}</button></div>
 
-        <AppUpdates expanded={page === 'settings'} />
+        <AppUpdates expanded={page === 'settings'} busy={!!busy} onBusyChange={value=>setBusy(value?'正在更新应用':null)} />
         {browser === 'firefox' && scan && !scan.browserAvailable && <FirefoxSetup busy={!!busy}
           onDownload={() => void perform('正在打开 Firefox 官方下载页', openFirefoxDownload)}
           onRefresh={() => void perform('正在重新检测 Firefox', () => refresh())} />}
@@ -201,7 +202,7 @@ export default function App() {
         {page === 'settings' && <>
           <section className="settings-card"><h3>专用浏览器</h3><p>独立环境支持 Chrome、Edge 和 Firefox。Firefox 可单独限制字体可见性，保留电脑字体。切换后，将检测对应浏览器的专用配置。</p><div className="browser-options">{(['chrome', 'edge', 'firefox'] as BrowserId[]).map(id => <button className={`browser-option ${id === browser ? 'chosen' : ''}`} key={id} disabled={!!busy} onClick={() => void switchBrowser(id)}><BrowserIcon browser={id} /><div><strong>{browserNames[id]}</strong><small>独立配置 · 首次使用需重新登录</small></div><span className="radio-dot">{id === browser && <span />}</span></button>)}</div></section>
           <section className="settings-card"><h3>修复方式</h3><div className="settings-line"><div><strong>自动备份与撤销</strong><p>每项修复写入前保存原值，修复记录仅保存在本机。</p></div><span className="settings-tag"><Check size={13} />始终开启</span></div><div className="settings-line"><div><strong>系统时区</strong><p>一键修复默认不修改系统时区，可在修复面板中单独选择。</p></div><span className="settings-tag neutral">手动选择</span></div><div className="settings-line"><div><strong>检测请求</strong><p>检测时请求 claude.ai、claude.com 与 Cloudflare，获取 HTTPS 状态和本机出口 IP。</p></div><span className="settings-tag neutral">应用启动或检测时运行</span></div></section>
-          <section className="settings-card about-card"><div className="brand"><Mark small /><span>Claude Done<small>版本 0.5.8 · Tauri 2</small></span></div><p>独立开发的环境助手，非 Anthropic 官方产品。检测与配置结果不能预测账户风控或保证服务可用。</p><button onClick={() => setModal({ kind: 'help' })}>使用指南<ArrowUpRight size={14} /></button></section>
+          <section className="settings-card about-card"><div className="brand"><Mark small /><span>Claude Done<small>版本 {version} · Tauri 2</small></span></div><p>独立开发的环境助手，非 Anthropic 官方产品。检测与配置结果不能预测账户风控或保证服务可用。</p><button onClick={() => setModal({ kind: 'help' })}>使用指南<ArrowUpRight size={14} /></button></section>
         </>}
         <footer className="content-footer"><span><LockKeyhole size={11} />备份存储在本机</span><span>Made for a calmer workflow.</span><button onClick={() => setModal({ kind: 'help' })}>帮助与说明<ArrowUpRight size={11} /></button></footer>
       </div>
