@@ -70,6 +70,9 @@
 
 .region-setting {margin:20px 0 10px}.region-setting>strong{display:block;font-size:13px;margin-bottom:9px}.region-single{grid-template-columns:1fr}.region-coordinates{margin-top:15px}.region-match{border:1px solid var(--surface-soft);border-radius:10px;padding:15px;margin-top:20px;background:var(--surface-soft)}.region-match>div{margin-top:12px;overflow-wrap:anywhere}.region-match strong,.region-match small{display:block}.region-match strong{font-size:13px}.region-match small{font-size:12px;color:var(--muted);line-height:1.7;margin-top:5px}
 /* NodeCloak design system: Ink / Paper / Phosphor, 4px spacing, original ghost. */
+.computer-sections{display:grid;gap:24px}
+.computer-sections>.settings-card{margin-bottom:0}
+.settings-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
 @font-face{font-family:Sora;src:url('/brand/fonts/sora.ttf') format('truetype');font-weight:100 800;font-display:swap}
 @font-face{font-family:'JetBrains Mono';src:url('/brand/fonts/jetbrains-mono.ttf') format('truetype');font-weight:100 800;font-display:swap}
 :root{font-family:Sora,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;--bg:#f6f4ef;--surface:#fff;--surface-soft:#efede7;--text:#11151b;--text-secondary:#46505d;--muted:#65707d;--border:#dddcd5;--accent:#3ddc97;--green:#0b6e48;--amber:#916214;--shadow-color:#11151b12;--ink:#11151b;--paper:#f6f4ef;color:var(--text);background:var(--bg);color-scheme:light}

@@ -1,11 +1,11 @@
 [package]
 name = "nodecloak"
-version = "0.7.0"
+version = "0.7.1"
 description = "Independent browser workspaces and environment diagnostics"
 authors = ["NodeCloak contributors"]
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/claudedone/claudedone"
+repository = "https://github.com/nodecloak/nodecloak"
 homepage = "https://claudedone.com"
 
 [lib]

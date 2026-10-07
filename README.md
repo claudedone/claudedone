@@ -2,7 +2,7 @@
 
 Windows 与 macOS 的 Claude 环境诊断和可撤销配置工具。基于 Tauri 2、React、TypeScript 和 Rust。
 
-[GitHub 下载](https://github.com/claudedone/claudedone/releases/latest) · [官网](https://claudedone.com) · [Telegram](https://t.me/claudedone) · [MIT License](LICENSE)
+[GitHub 下载](https://github.com/nodecloak/nodecloak/releases/latest) · [官网](https://claudedone.com) · [Telegram](https://t.me/nodecloak_official) · [MIT License](LICENSE)
 
 ## 功能
 

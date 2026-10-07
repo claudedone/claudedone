@@ -16,9 +16,9 @@ for(const [platform,name] of Object.entries(names)) {
   const signature=fs.readFileSync(path.join(directory,`${name}.sig`),'utf8').trim();
   const decoded=Buffer.from(signature,'base64').toString('utf8');
   if(!decoded.startsWith('untrusted comment:') || !decoded.includes('trusted comment:') || !decoded.includes(`\tversion:${version}`)) throw new Error(`Invalid or mismatched updater signature file: ${platform}`);
-  platforms[platform]={url:`https://github.com/claudedone/claudedone/releases/download/v${version}/${name}`,signature};
+  platforms[platform]={url:`https://github.com/nodecloak/nodecloak/releases/download/v${version}/${name}`,signature};
 }
-const releaseNotes=['品牌升级为 NodeCloak，官网与桌面端使用新的幽灵 Logo、Ink / Paper / Phosphor 视觉系统，支持浅色、深色和跟随系统主题。','浏览器副本支持跟随出口 IP 或自定义语言、时区和地理位置；定位权限支持询问、允许或禁用，原生区域接口会暴露自动化模式标记。','包名更新为 com.nodecloak，继续读取原 Claude Done 副本、字体备份、修复记录和代理凭据，不移动已有数据。','官网保留中英文、独立检测与联系页面，增加节点和渐隐点阵动效，并尊重系统减少动态效果偏好。'];
+const releaseNotes=['统一更新 Telegram 用户交流群为 https://t.me/nodecloak_official。','桌面源码、下载和签名自动更新统一使用 https://github.com/nodecloak/nodecloak。','修复电脑环境页面提示区、时区列表与字体管理卡片之间的间距，字体操作按钮支持换行并保留间隔。'];
 const manifest={version,notes:releaseNotes.map(note=>`- ${note}`).join('\n'),pub_date:new Date().toISOString(),platforms};
 fs.writeFileSync(path.join(directory,'latest.json'),JSON.stringify(manifest,null,2)+'\n');
 files.push('latest.json');

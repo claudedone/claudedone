@@ -463,7 +463,7 @@ pub fn open_timezone_settings() -> Result<(), String> {
 }
 
 pub fn open_telegram_group() -> Result<(), String> {
-    open_external("https://t.me/claudedone")
+    open_external("https://t.me/nodecloak_official")
 }
 
 pub fn open_download_page() -> Result<(), String> {

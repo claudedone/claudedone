@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for platform in ["windows-x86_64", "darwin-aarch64", "darwin-x86_64"] {
         let entry = platforms.get(platform).ok_or("Missing platform update")?;
         let url = reqwest::Url::parse(entry["url"].as_str().ok_or("Missing update URL")?)?;
-        if url.scheme() != "https" || url.host_str() != Some("github.com") || !url.path().starts_with(&format!("/claudedone/claudedone/releases/download/v{version}/")) {
+        if url.scheme() != "https" || url.host_str() != Some("github.com") || !url.path().starts_with(&format!("/nodecloak/nodecloak/releases/download/v{version}/")) {
             return Err("Unexpected updater release URL".into());
         }
         let name = url.path_segments().and_then(|mut parts| parts.next_back()).ok_or("Invalid update filename")?;

@@ -1,7 +1,7 @@
 {
   "name": "nodecloak",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/claudedone/claudedone.git"
+    "url": "https://github.com/nodecloak/nodecloak.git"
   },
   "homepage": "https://claudedone.com"
 }

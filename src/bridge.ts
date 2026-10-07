@@ -102,7 +102,7 @@ export async function openTimezoneSettings(): Promise<void> {
 }
 export async function openTelegramGroup(): Promise<void> {
   if (native) return invoke('open_telegram_group');
-  window.open('https://t.me/claudedone', '_blank', 'noopener,noreferrer');
+  window.open('https://t.me/nodecloak_official', '_blank', 'noopener,noreferrer');
 }
 export async function getTimezoneCatalog(): Promise<TimezoneOption[]> {
   if (native) return invoke('get_timezone_catalog');
