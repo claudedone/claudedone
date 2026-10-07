@@ -101,7 +101,10 @@ fn identifier() -> String {
     uuid::Uuid::new_v4().simple().to_string()
 }
 fn valid_id(id: &str) -> bool {
-    id.len() == 32 && id.bytes().all(|b| b.is_ascii_hexdigit())
+    id.len() == 32
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         || ["legacy-chrome", "legacy-edge", "legacy-firefox"].contains(&id)
 }
 fn existing_preferences(root: &Path, browser: &str) -> Preferences {
@@ -211,6 +214,7 @@ pub fn load(root: &Path) -> Result<Vec<Profile>, String> {
             || !unique.insert(&profile.id)
             || !["chrome", "edge", "firefox"].contains(&profile.browser.as_str())
             || profile.legacy != profile.id.starts_with("legacy-")
+            || (profile.legacy && profile.id != format!("legacy-{}", profile.browser))
         {
             return Err("副本清单包含无效或重复条目".into());
         }
@@ -219,14 +223,15 @@ pub fn load(root: &Path) -> Result<Vec<Profile>, String> {
 }
 fn save(root: &Path, profiles: &[Profile]) -> Result<(), String> {
     guard_tree(root)?;
-    engine::atomic_write(
-        &root.join("profiles.json"),
-        &serde_json::to_vec_pretty(&Registry {
-            schema: 1,
-            profiles: profiles.to_vec(),
-        })
-        .map_err(|_| "无法保存副本清单")?,
-    )
+    let bytes = serde_json::to_vec_pretty(&Registry {
+        schema: 1,
+        profiles: profiles.to_vec(),
+    })
+    .map_err(|_| "无法保存副本清单")?;
+    if bytes.len() > 4 * 1024 * 1024 {
+        return Err("副本清单已达大小限制，请减少备注或清理最近删除".into());
+    }
+    engine::atomic_write(&root.join("profiles.json"), &bytes)
 }
 pub fn get(root: &Path, id: &str, deleted: bool) -> Result<Profile, String> {
     if !valid_id(id) {
@@ -310,13 +315,18 @@ pub fn upstream(p: &Profile, active: bool) -> Result<Upstream, String> {
     };
     Ok(Upstream {
         config: config.clone(),
-        password: password(&p.id, config)?,
+        password: if config.custom() && !config.username.is_empty() {
+            password(&p.id, config)?
+        } else {
+            String::new()
+        },
     })
 }
 pub fn draft_upstream(root: &Path, id: Option<&str>, draft: &Draft) -> Result<Upstream, String> {
     validate(draft)?;
     let old = id.map(|id| get(root, id, false)).transpose()?;
     let password = match &draft.password {
+        _ if !draft.proxy.custom() || draft.proxy.username.is_empty() => String::new(),
         Some(value) if !value.is_empty() => value.clone(),
         _ if !draft.clear_password => old
             .as_ref()
@@ -354,6 +364,9 @@ fn validate(draft: &Draft) -> Result<(), String> {
         return Err("浏览器语言格式无效，例如 en-US,en".into());
     }
     let url = &draft.preferences.startup_url;
+    if url.len() > 4096 {
+        return Err("启动页面地址过长，最多 4096 字节".into());
+    }
     if url != "about:blank" {
         let parsed = reqwest::Url::parse(url).map_err(|_| "启动页面地址无效")?;
         if !["https", "http"].contains(&parsed.scheme())
@@ -1081,5 +1094,22 @@ mod tests {
         let bytes = serde_json::to_string(&config).unwrap();
         assert!(!bytes.contains("password"));
         assert!(validate(&draft(" ")).is_err());
+    }
+    #[test]
+    fn unused_credentials_do_not_block_direct_mode_and_registry_rejects_aliasing() {
+        let root = tempfile::tempdir().unwrap();
+        let mut p = create(root.path(), draft("direct"), None).unwrap();
+        p.proxy.mode = "direct".into();
+        p.proxy.username = "old user".into();
+        p.proxy.credential_ref = Some(identifier());
+        assert!(upstream(&p, false).unwrap().password.is_empty());
+        let mut list = load(root.path()).unwrap();
+        list[0].browser = "firefox".into();
+        save(root.path(), &list).unwrap();
+        assert!(load(root.path()).is_err());
+        assert!(!valid_id(&"A".repeat(32)));
+        let mut d = draft("large URL");
+        d.preferences.startup_url = format!("https://example.com/{}", "x".repeat(4096));
+        assert!(validate(&d).is_err());
     }
 }

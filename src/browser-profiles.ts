@@ -20,6 +20,7 @@ export function validateDraft(draft:ProfileDraft):string|null {
   if(draft.tags.length>10||draft.tags.some(tag=>!tag.trim()||tag.length>24))return '最多 10 个标签，每个标签不超过 24 个字符';
   if(draft.notes.length>1000)return '备注最多 1000 个字符';
   if(!/^[a-zA-Z0-9-]+(?:,[a-zA-Z0-9-]+)*$/.test(draft.preferences.language))return '语言格式示例：en-US,en';
+  if(draft.preferences.startupUrl.length>4096)return '启动页面地址过长';
   try {if(draft.preferences.startupUrl!=='about:blank'){const url=new URL(draft.preferences.startupUrl);if(!['http:','https:'].includes(url.protocol)||url.username||url.password)return '启动页面只支持 HTTP、HTTPS 或 about:blank';}}catch{return '请填写完整的启动页面地址';}
   if(['http','https','socks5'].includes(draft.proxy.mode)) {if(!draft.proxy.host.trim()||/[\s/@?#\\]/.test(draft.proxy.host))return '请填写 IP 或域名，协议和端口分别填写';if(!Number.isInteger(draft.proxy.port)||draft.proxy.port<1||draft.proxy.port>65535)return '端口必须在 1–65535 之间';if(new TextEncoder().encode(draft.proxy.username).length>255||/[:\x00-\x1f\x7f]/.test(draft.proxy.username))return '代理用户名不能包含冒号或换行';}
   if(new TextEncoder().encode(draft.password||'').length>255||/[\x00-\x1f\x7f]/.test(draft.password||''))return '密码不能包含控制字符，且最多 255 字节';
