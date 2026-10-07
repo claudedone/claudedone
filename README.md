@@ -34,9 +34,9 @@ npm run build
 cargo test --manifest-path src-tauri/Cargo.toml --locked
 ```
 
-Windows 安装包：`npm run tauri build -- --bundles nsis`。
+本机打包：`node scripts/build-desktop.mjs`。Windows 生成 NSIS 安装包，Mac 生成应用与 DMG；普通本地构建关闭更新包签名，不需要维护者私钥。
 
-macOS DMG：在 Mac 上运行 `npm run tauri build -- --bundles dmg`。CI 分别使用 Windows、Apple Silicon Mac 和 Intel Mac 构建。产物保存在 `src-tauri/target/release/bundle/`；CI 上传构建产物，不自动部署官网。发布包签名与 Apple 公证需要维护者单独配置，密钥不能提交到源码。
+CI 分别使用 Windows、Apple Silicon Mac 和 Intel Mac 构建。产物保存在 `src-tauri/target/release/bundle/`；推送版本标签时生成签名更新包并发布 GitHub Release，不自动部署官网。Windows 代码签名与 Apple 公证需要维护者单独配置，密钥不能提交到源码。
 
 ## 自动发布
 
