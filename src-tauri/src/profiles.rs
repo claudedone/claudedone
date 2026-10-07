@@ -812,6 +812,29 @@ pub fn history(root: &Path, id: Option<&str>) -> Result<Vec<engine::Record>, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn test_dir() -> tempfile::TempDir {
+        // macOS /var is a system symlink; fixtures use its real path while
+        // production profile paths still reject symlinked ancestors.
+        tempfile::tempdir_in(std::env::temp_dir().canonicalize().unwrap()).unwrap()
+    }
+    #[cfg(unix)]
+    #[test]
+    fn profile_paths_reject_symlinked_directories() {
+        let root = test_dir();
+        let real = root.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        let alias = root.path().join("alias");
+        std::os::unix::fs::symlink(&real, &alias).unwrap();
+        assert!(load(&alias).is_err());
+        assert!(!real.join("profiles.json").exists());
+        std::fs::create_dir(root.path().join("profiles")).unwrap();
+        let id = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        std::os::unix::fs::symlink(&real, root.path().join("profiles").join(id)).unwrap();
+        let mut p = load(root.path()).unwrap().remove(0);
+        p.id = id.into();
+        p.legacy = false;
+        assert!(base(root.path(), &p).is_err());
+    }
     #[tokio::test]
     async fn fresh_launch_replaces_stale_relay_while_recovery_keeps_active_route() {
         use tokio::{
@@ -827,7 +850,7 @@ mod tests {
             port: old.local_addr().unwrap().port(),
             ..ProxyConfig::default()
         };
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let p = create(root.path(), d, None).unwrap();
         let runtime = Runtime::default();
         let old_port = prepare_relay(root.path(), &p, &runtime, false)
@@ -892,7 +915,7 @@ mod tests {
     }
     #[test]
     fn repairs_and_undo_survive_next_launch_and_histories_do_not_cross_profiles() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let mut d = draft("Firefox one");
         d.browser = "firefox".into();
         let one = create(root.path(), d, None).unwrap();
@@ -929,7 +952,7 @@ mod tests {
     }
     #[test]
     fn migrating_and_purging_legacy_profiles_preserves_computer_history() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         load(root.path()).unwrap();
         let records = ["language", "timezone", "cli"]
             .into_iter()
@@ -960,7 +983,7 @@ mod tests {
     }
     #[test]
     fn editing_settings_defers_disk_writes_until_launch() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let p = create(root.path(), draft("one"), None).unwrap();
         let mut d = draft("one");
         d.preferences.language = "en-GB,en".into();
@@ -981,7 +1004,7 @@ mod tests {
     #[test]
     #[ignore = "Uses the native OS credential store; run explicitly on Windows/macOS"]
     fn native_password_lifecycle_keeps_json_secret_free() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let mut d = draft("credential test");
         d.proxy = ProxyConfig {
             mode: "http".into(),
@@ -1022,7 +1045,7 @@ mod tests {
     }
     #[test]
     fn computer_font_records_stay_global_even_when_firefox_is_selected() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         load(root.path()).unwrap();
         let record:engine::Record=serde_json::from_value(serde_json::json!({"id":"font-test","itemId":"fonts","browser":"firefox","createdAt":stamp(),"status":"applied","message":"","changes":[{"target":"userFont","pointer":"","before":null,"after":null}]})).unwrap();
         engine::save_history(root.path(), &[record]).unwrap();
@@ -1037,7 +1060,7 @@ mod tests {
     }
     #[test]
     fn migration_keeps_existing_login_and_registry_is_idempotent() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let path = root.path().join("browser-chrome/Default");
         std::fs::create_dir_all(&path).unwrap();
         std::fs::write(path.join("Cookies"), b"login").unwrap();
@@ -1048,7 +1071,7 @@ mod tests {
     }
     #[test]
     fn new_profiles_and_copied_settings_do_not_copy_login_or_history() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let p = create(root.path(), draft("one"), None).unwrap();
         std::fs::write(
             path(root.path(), &p).unwrap().join("Default/Cookies"),
@@ -1068,7 +1091,7 @@ mod tests {
     }
     #[test]
     fn trash_restore_and_purge_are_scoped_to_one_profile() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let p = create(root.path(), draft("one"), None).unwrap();
         let other = create(root.path(), draft("two"), None).unwrap();
         let runtime = Runtime::default();
@@ -1097,7 +1120,7 @@ mod tests {
     }
     #[test]
     fn unused_credentials_do_not_block_direct_mode_and_registry_rejects_aliasing() {
-        let root = tempfile::tempdir().unwrap();
+        let root = test_dir();
         let mut p = create(root.path(), draft("direct"), None).unwrap();
         p.proxy.mode = "direct".into();
         p.proxy.username = "old user".into();
