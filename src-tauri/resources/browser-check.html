@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'"><title>Claude Done · 本地浏览器复检</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f6f7f3;color:#304335;font:14px/1.8 system-ui,"Microsoft YaHei",sans-serif}main{max-width:850px;margin:48px auto;padding:0 24px}header{display:flex;justify-content:space-between;gap:20px;align-items:center}h1{font-size:27px;font-weight:600;margin:24px 0 6px}p{color:#6f8066;margin:0 0 20px}.badge{font-size:11px;background:#e8efdf;padding:4px 10px;border-radius:4px}.row{display:grid;grid-template-columns:145px 1fr;gap:16px;padding:20px 22px;background:#fff;border:1px solid #e4e9dd;margin-top:10px;border-radius:8px}.row strong{font-size:13px}.value{word-break:break-word;color:#3e5c43}.row small{display:block;margin-top:5px;font-size:12px;color:#78896c}.note{padding:17px;background:#eef2e6;border:1px solid #dfe8d2;border-radius:7px;font-size:12px;margin:22px 0;color:#6e805d}.actions{display:flex;gap:12px;margin:25px 0}button{font:inherit;cursor:pointer;border:1px solid #d4dfc6;color:#527043;background:#f9fbf5;padding:8px 15px;border-radius:6px}button.primary{background:#2e4c39;color:white;border-color:#2e4c39}button:focus-visible,textarea:focus-visible{outline:3px solid #9db685;outline-offset:3px}textarea{width:100%;height:220px;border:1px solid #dae4ce;background:#fff;border-radius:7px;padding:15px;font:12px/1.8 Consolas,monospace;color:#557246;resize:vertical}footer{font-size:11px;color:#809274;margin:24px 0}#message{font-size:12px;color:#587946}@media(max-width:600px){.row{grid-template-columns:1fr;gap:3px}main{margin:20px auto}header{flex-wrap:wrap}}</style></head>
+<body><main><header><strong>Claude Done</strong><span class="badge">仅在本机运行 · 无网络请求</span></header><h1>网页实际看到的环境</h1><p>在实际使用的专用浏览器中读取。这里显示的是检测值，不是账户风险评分。</p><section id="results" aria-live="polite"></section><div class="note">新加坡和上海同为 UTC+8：改变时区标识不会改变偏移。中文字体和 Windows 平台特征可能继续被第三方站点计分，它们本身不是故障。字体采用候选名单的 Canvas 宽度比较，平台风格只根据 UA 推断。</div><div class="actions"><button class="primary" id="rescan">重新采集</button><button id="copy">复制检测报告</button></div><p id="message" role="status"></p><label for="report">将下面的完整报告粘贴到工具的「导入浏览器复检」面板：</label><textarea id="report" readonly spellcheck="false"></textarea><footer>报告包含 11 项网页信号和页面来源标记，其中有 GPU、屏幕和逻辑处理器等设备信息。仅用于本地导入，不读取 IP、cookies、登录信息或密钥。</footer></main>
+<script>
+(() => {
+  const names = ['Microsoft YaHei','Microsoft YaHei UI','SimSun','NSimSun','FangSong','KaiTi','DengXian','PingFang SC','Songti SC','Heiti SC','STHeiti','Noto Sans CJK SC','WenQuanYi Micro Hei'];
+  function fontMatches() {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas 不可用，未生成报告。请使用普通浏览器窗口重试。');
+    const sample = 'mmmmmmmwwwwwiiiiillllABCxyz0123456789';
+    const generic = ['monospace','serif','sans-serif'];
+    const widths = generic.map(base => { context.font = '72px ' + base; return context.measureText(sample).width; });
+    return names.filter(name => generic.some((base, i) => { context.font = '72px "' + name + '", ' + base; return Math.abs(context.measureText(sample).width - widths[i]) > 0.01; }));
+  }
+  function platformFromUA() {
+    const ua = navigator.userAgent;
+    if (/Windows/i.test(ua)) return 'Windows';
+    if (/Macintosh|Mac OS X/i.test(ua)) return 'macOS';
+    if (/Linux/i.test(ua)) return 'Linux';
+    return 'Other';
+  }
+  function renderer() {
+    try {
+      const canvas=document.createElement('canvas');
+      const gl=canvas.getContext('webgl');
+      if(!gl) return null;
+      const ext=gl.getExtension('WEBGL_debug_renderer_info');
+      const value=ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)).slice(0,1024) : null;
+      const lose=gl.getExtension('WEBGL_lose_context'); if(lose) lose.loseContext();
+      return value;
+    } catch { return null; }
+  }
+  function numberOrNull(value) { return typeof value==='number' && Number.isFinite(value) && value>=0 ? value : null; }
+  function booleanOrNull(value) { return typeof value==='boolean' ? value : null; }
+  function offsetLabel(minutes) {
+    const east = -minutes, remainder = Math.abs(east) % 60;
+    return 'UTC' + (east >= 0 ? '+' : '-') + Math.floor(Math.abs(east) / 60) + (remainder ? ':' + String(remainder).padStart(2,'0') : '');
+  }
+  function collect() {
+    document.getElementById('message').textContent = '';
+    try {
+      const intl = Intl.DateTimeFormat().resolvedOptions();
+      const marker='__CLAUDE_READY_BROWSER__';
+      const conn=navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const r = { schemaVersion:2, browser:['chrome','edge','firefox'].includes(marker)?marker:null, capturedAt:new Date().toISOString(), timezone:intl.timeZone, offsetMinutes:new Date().getTimezoneOffset(), languages:Array.from(navigator.languages), locale:intl.locale, fonts:fontMatches(), platform:platformFromUA(), webgl:renderer(), screen:{width:screen.width,height:screen.height,pixelRatio:devicePixelRatio}, network:{supported:!!conn,effectiveType:typeof conn?.effectiveType==='string'?conn.effectiveType:null,downlink:numberOrNull(conn?.downlink),rtt:numberOrNull(conn?.rtt),saveData:booleanOrNull(conn?.saveData)}, plugins:{count:navigator.plugins?.length || 0,hardwareConcurrency:numberOrNull(navigator.hardwareConcurrency),pdfViewerEnabled:booleanOrNull(navigator.pdfViewerEnabled)}, privacy:{dnt:typeof navigator.doNotTrack==='string'?navigator.doNotTrack:null,gpc:booleanOrNull(navigator.globalPrivacyControl)} };
+      const rows = [
+        ['系统时区',r.timezone,'网页 Intl.DateTimeFormat 的 timeZone；不读取工具配置。'],
+        ['浏览器语言',r.languages.join(', '),'实际 navigator.languages 列表。'],
+        ['中文字体可见性',r.fonts.length ? r.fonts.join(', ') : '候选名单未命中','Canvas 宽度探测可能误判，不是完整系统字体清单。'],
+        ['Intl 区域设置',r.locale,'网页日期 / 数字格式化的默认 locale。'],
+        ['UTC 时区偏移',offsetLabel(r.offsetMinutes),'Date.getTimezoneOffset() = ' + r.offsetMinutes + ' 分钟。'],
+        ['Emoji / 系统风格',(r.platform === 'Windows' ? 'Microsoft' : r.platform === 'macOS' ? 'Apple' : r.platform) + ' style','这里只根据 UA 推断平台，不是真实 Emoji 像素测试；不保证与第三方算法相同。'],
+        ['WebGL 渲染器',r.webgl || '扩展不可用 / 被浏览器限制','GPU 与图形后端是设备特征，不代表国家或账号异常。'],
+        ['屏幕与缩放',r.screen.width+'×'+r.screen.height+' @'+r.screen.pixelRatio+'x','网页 screen 和 devicePixelRatio；受屏幕或浏览器缩放影响。'],
+        ['浏览器网络估计',r.network.supported ? (r.network.effectiveType || '未知等级')+' / '+(r.network.downlink===null?'未提供速率':r.network.downlink+' Mbps（估计）') : '浏览器不支持此 API','4g 是性能等级，不等于蜂窝网络；此项不是测速或出口检测。'],
+        ['插件与逻辑处理器',r.plugins.count+' 个网页插件 · '+(r.plugins.hardwareConcurrency===null?'并发信息不可用':r.plugins.hardwareConcurrency+' 个逻辑处理器提示'),'现代网页插件通常是内置 PDF 兼容条目，不等于扩展或物理核心数。'],
+        ['隐私偏好 DNT / GPC','DNT: '+(['1','yes'].includes(r.privacy.dnt)?'开启':r.privacy.dnt===null?'未提供':'未开启')+' · GPC: '+(r.privacy.gpc===null?'不支持 / 未提供':r.privacy.gpc?'开启':'未开启'),'隐私偏好不等于跟踪拦截；不支持与关闭分别记录。'],
+        ['报告来源',r.browser ? 'Claude Done 专用 '+r.browser+' 页面' : '普通页面 / 无专用配置标记','标记仅记录本工具生成页面的用途，不是浏览器身份认证。请确认实际窗口。']
+      ];
+      const results = document.getElementById('results'); results.replaceChildren();
+      for (const [title,value,note] of rows) {
+        const row = document.createElement('article'); row.className = 'row';
+        const label = document.createElement('strong'); label.textContent = title;
+        const body = document.createElement('div'); body.className = 'value'; body.textContent = value;
+        const caption = document.createElement('small'); caption.textContent = note;
+        body.append(caption); row.append(label,body); results.append(row);
+      }
+      document.getElementById('report').value = JSON.stringify(r,null,2);
+    } catch (e) { document.getElementById('report').value = ''; document.getElementById('message').textContent = String(e.message || e); }
+  }
+  document.getElementById('rescan').addEventListener('click', collect);
+  document.getElementById('copy').addEventListener('click', async () => {
+    const box = document.getElementById('report');
+    if (!box.value) return;
+    try { await navigator.clipboard.writeText(box.value); document.getElementById('message').textContent = '已复制。回到 Claude Done，选择「导入浏览器复检」。'; }
+    catch { box.focus(); box.select(); document.getElementById('message').textContent = '已选中报告，请按 Ctrl+C（macOS 为 ⌘C）复制。'; }
+  });
+  collect();
+})();
+</script></body></html>
+

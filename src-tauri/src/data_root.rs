@@ -1,0 +1,52 @@
+use std::path::{Path, PathBuf};
+
+// Keep existing browser profiles, font backups and journals in place. Some
+// journal entries contain paths, so renaming or copying the tree is unsafe.
+const LEGACY_IDENTIFIER: &str = "com.claudeready.desktop";
+
+pub struct DataRoot(pub PathBuf);
+
+fn has_environment_data(root: &Path) -> bool {
+    root.join("history.json").is_file()
+        || ["browser-chrome", "browser-edge", "browser-firefox"]
+            .iter()
+            .any(|name| root.join(name).is_dir())
+}
+
+pub fn resolve(current: PathBuf) -> PathBuf {
+    if !has_environment_data(&current) {
+        if let Some(parent) = current.parent() {
+            let legacy = parent.join(LEGACY_IDENTIFIER);
+            if has_environment_data(&legacy) {
+                return legacy;
+            }
+        }
+    }
+    current
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn existing_profiles_are_reused_without_moving_them() {
+        let directory = tempfile::tempdir().unwrap();
+        let legacy = directory.path().join(LEGACY_IDENTIFIER);
+        std::fs::create_dir_all(legacy.join("browser-edge")).unwrap();
+        std::fs::write(legacy.join("history.json"), "[]").unwrap();
+        let current = directory.path().join("com.claudedone");
+        std::fs::create_dir_all(current.join("EBWebView")).unwrap();
+        assert_eq!(resolve(current), legacy);
+        assert!(legacy.join("history.json").exists());
+    }
+    #[test]
+    fn fresh_install_and_existing_new_data_use_the_new_identifier() {
+        let directory = tempfile::tempdir().unwrap();
+        let current = directory.path().join("com.claudedone");
+        assert_eq!(resolve(current.clone()), current);
+        let legacy = directory.path().join(LEGACY_IDENTIFIER);
+        std::fs::create_dir_all(legacy.join("browser-edge")).unwrap();
+        std::fs::create_dir_all(current.join("browser-chrome")).unwrap();
+        assert_eq!(resolve(current.clone()), current);
+    }
+}

@@ -1,0 +1,53 @@
+# Claude Done
+
+Windows 与 macOS 的 Claude 环境诊断和可撤销配置工具。基于 Tauri 2、React、TypeScript 和 Rust。
+
+[官网与下载](https://claudedone.com) · [Telegram](https://t.me/claudedone) · [MIT License](LICENSE)
+
+## 功能
+
+- 为 Chrome / Edge / Firefox 建立独立浏览器配置，检查语言与隐私偏好。
+- 独立 Firefox 字体可见性设置，保留电脑原有字体；未安装时提供官方下载和重新检测。
+- 分别检查系统时区名称和实际 UTC 偏移，支持系统认可的自定义时区。
+- Claude Code 检查与专用启动器。
+- 可选用户字体处理、修改前备份、处理后核验及按项恢复。
+- 本地浏览器报告导入，以及官网下载更新提示。
+
+系统时区和字体处理由用户选择并确认影响。配置写入成功不等于浏览器实际值已改变，应关闭旧专用窗口再复检。环境检测不是 Anthropic 官方账户风险结论，工具不保证账户结果。项目与 Anthropic 无隶属关系。
+
+## 开发
+
+需要 Node.js 24、Rust stable；Windows 需要 Visual Studio C++ Build Tools 和 WebView2，macOS 需要 Xcode Command Line Tools。
+
+```sh
+npm ci
+npm run tauri dev
+```
+
+只预览前端：`npm run dev`，访问 `http://127.0.0.1:1420`。该模式使用演示数据，不更改电脑配置。
+
+## 测试与构建
+
+```sh
+npm test
+npm run build
+cargo test --manifest-path src-tauri/Cargo.toml --locked
+```
+
+Windows 安装包：`npm run tauri build -- --bundles nsis`。
+
+macOS DMG：在 Mac 上运行 `npm run tauri build -- --bundles dmg`。CI 分别使用 Windows、Apple Silicon Mac 和 Intel Mac 构建。产物保存在 `src-tauri/target/release/bundle/`；CI 上传构建产物，不自动部署官网。发布包签名与 Apple 公证需要维护者单独配置，密钥不能提交到源码。
+
+首次提交从 0.5.8 桌面源码快照导出，不包含旧 Git 历史、官网源码、运维记录、历史安装包或本机工具链缓存。开源版本使用独立绿色图标，见 [图标说明](docs/branding.md)。官网和已发布的 0.5.8 安装包是独立发布，不由此次源码拆分重新打包。
+
+## 配置与隐私
+
+应用数据位于 `%APPDATA%/com.claudedone`（Windows）或 `~/Library/Application Support/com.claudedone`（macOS）。旧 `com.claudeready.desktop` 数据目录兼容保留，源码中的旧内部名称不应直接删除。
+
+工具不读取 Claude 密钥、浏览器 cookies 或登录凭据，不上传修复备份。连接检查访问 Claude 和 Cloudflare，更新检查访问 `https://claudedone.com/updates/latest.json`；这些服务会看到普通网络请求和客户端 IP。专用浏览器需要用户自行登录。
+
+分支版本默认沿用官方更新提示；自行发行前应更改 `src-tauri/src/updates.rs` 的更新端点及相关官网下载入口，避免提示安装另一个发行方的程序。
+
+## 贡献与许可
+
+见 [贡献指南](CONTRIBUTING.md)、[安全反馈](SECURITY.md) 和 [第三方许可说明](THIRD_PARTY_NOTICES.md)。项目原创源码与本仓库图标使用 MIT；依赖保留各自许可。
