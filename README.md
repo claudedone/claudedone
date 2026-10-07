@@ -2,7 +2,7 @@
 
 Windows 与 macOS 的 Claude 环境诊断和可撤销配置工具。基于 Tauri 2、React、TypeScript 和 Rust。
 
-[官网与下载](https://claudedone.com) · [Telegram](https://t.me/claudedone) · [MIT License](LICENSE)
+[GitHub 下载](https://github.com/claudedone/claudedone/releases/latest) · [官网](https://claudedone.com) · [Telegram](https://t.me/claudedone) · [MIT License](LICENSE)
 
 ## 功能
 
@@ -37,6 +37,12 @@ cargo test --manifest-path src-tauri/Cargo.toml --locked
 Windows 安装包：`npm run tauri build -- --bundles nsis`。
 
 macOS DMG：在 Mac 上运行 `npm run tauri build -- --bundles dmg`。CI 分别使用 Windows、Apple Silicon Mac 和 Intel Mac 构建。产物保存在 `src-tauri/target/release/bundle/`；CI 上传构建产物，不自动部署官网。发布包签名与 Apple 公证需要维护者单独配置，密钥不能提交到源码。
+
+## 自动发布
+
+更新 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 中的版本，提交后创建并推送 `v版本号` 标签，例如 `git tag v0.5.9`、`git push origin v0.5.9`。标签必须与三处主版本设置一致。
+
+GitHub Actions 会测试和构建 Windows x64、Mac Apple Silicon 和 Intel；所有平台通过后自动发布 GitHub Release，包括 Windows 安装版、便携版、两种 DMG、三端第三方许可归档和 `SHA256SUMS.txt`。主分支、PR 和手动运行只生成构建产物，推送版本标签才发布。已经公开的 Release 不会被工作流覆盖；失败任务可通过 Actions 重新运行。
 
 首次提交从 0.5.8 桌面源码快照导出，不包含旧 Git 历史、官网源码、运维记录、历史安装包或本机工具链缓存。开源版本使用独立绿色图标，见 [图标说明](docs/branding.md)。官网和已发布的 0.5.8 安装包是独立发布，不由此次源码拆分重新打包。
 

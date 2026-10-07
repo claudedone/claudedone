@@ -14,3 +14,6 @@ src-tauri/gen/
 *.pem
 *.key
 *.p12
+release-assets/
+release-notices/
+.release-*

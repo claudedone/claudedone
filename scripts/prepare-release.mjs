@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {projectRoot,releaseVersion,verifyReleaseAssets} from './release-utils.mjs';
+if(!process.env.RELEASE_TAG) throw new Error('A version tag is required to publish');
+const version=releaseVersion();
+const directory=path.join(projectRoot,'release-assets');
+const files=verifyReleaseAssets(directory,version);
+const sums=files.map(name=>`${crypto.createHash('sha256').update(fs.readFileSync(path.join(directory,name))).digest('hex')}  ${name}`).join('\n')+'\n';
+fs.writeFileSync(path.join(directory,'SHA256SUMS.txt'),sums);
+fs.writeFileSync(path.join(projectRoot,'.release-notes.md'),`Claude Done ${version} 开源桌面版本。安装包由本版本标签的 GitHub Actions 自动构建，使用本仓库的独立绿色图标。\n\n| 平台 | 文件 |\n| --- | --- |\n| Windows x64 安装版 | ClaudeDone_${version}_windows_x64_setup.exe |\n| Windows x64 便携版 | ClaudeDone_${version}_windows_x64_portable.exe |\n| macOS Apple Silicon（M 系列） | ClaudeDone_${version}_macos_arm64.dmg |\n| macOS Intel | ClaudeDone_${version}_macos_x64.dmg |\n\nSHA256SUMS.txt 提供包校验值；THIRD_PARTY_NOTICES 归档包含三端依赖许可。源码与图标说明见本仓库 README。\n\nmacOS 包未做 Apple 公证，Windows 包未做代码签名。\n`);
+console.log(`Verified complete release ${version}; checksums and release notes written.`);
