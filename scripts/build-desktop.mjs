@@ -3,7 +3,7 @@ import {projectRoot,releaseVersion} from './release-utils.mjs';
 releaseVersion();
 const signed=Boolean(process.env.RELEASE_TAG);
 if(signed && !process.env.TAURI_SIGNING_PRIVATE_KEY) throw new Error('Signed releases require the repository TAURI_SIGNING_PRIVATE_KEY secret');
-const args=['scripts/tauri.mjs','build','--bundles',process.platform==='win32'?'nsis':'dmg'];
+const args=['scripts/tauri.mjs','build','--bundles',process.platform==='win32'?'nsis':'app,dmg'];
 if(!signed) args.push('--config','src-tauri/tauri.ci.json');
 const result=spawnSync(process.execPath,args,{cwd:projectRoot,stdio:'inherit'});
 if(result.error) throw result.error;
