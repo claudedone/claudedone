@@ -682,6 +682,15 @@ pub async fn prepare_relay(
     runtime: &Runtime,
     recover: bool,
 ) -> Result<Option<u16>, String> {
+    // Fresh launches must not reuse a relay left by an externally closed browser.
+    // Recovering a live browser preserves its active route until an explicit restart.
+    if !recover {
+        runtime
+            .0
+            .lock()
+            .map_err(|_| "代理管理器不可用")?
+            .remove(&p.id);
+    }
     let config = if recover {
         p.active_proxy.as_ref().unwrap_or(&p.proxy)
     } else {
@@ -790,6 +799,84 @@ pub fn history(root: &Path, id: Option<&str>) -> Result<Vec<engine::Record>, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn fresh_launch_replaces_stale_relay_while_recovery_keeps_active_route() {
+        use tokio::{
+            io::{AsyncReadExt, AsyncWriteExt},
+            net::TcpListener,
+        };
+        let old = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let new = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut d = draft("relay lifecycle");
+        d.proxy = ProxyConfig {
+            mode: "http".into(),
+            host: "127.0.0.1".into(),
+            port: old.local_addr().unwrap().port(),
+            ..ProxyConfig::default()
+        };
+        let root = tempfile::tempdir().unwrap();
+        let p = create(root.path(), d, None).unwrap();
+        let runtime = Runtime::default();
+        let old_port = prepare_relay(root.path(), &p, &runtime, false)
+            .await
+            .unwrap();
+        mark_started(root.path(), &p.id, old_port).unwrap();
+        let mut d = draft("relay lifecycle");
+        d.proxy = ProxyConfig {
+            mode: "http".into(),
+            host: "127.0.0.1".into(),
+            port: new.local_addr().unwrap().port(),
+            ..ProxyConfig::default()
+        };
+        let updated = update(root.path(), &p.id, d).unwrap();
+        assert_eq!(
+            prepare_relay(root.path(), &updated, &runtime, true)
+                .await
+                .unwrap(),
+            old_port
+        );
+        let port = prepare_relay(root.path(), &updated, &runtime, false)
+            .await
+            .unwrap()
+            .unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = new.accept().await.unwrap();
+            let mut request = vec![];
+            loop {
+                request.push(socket.read_u8().await.unwrap());
+                if request.ends_with(b"\r\n\r\n") {
+                    break;
+                }
+            }
+            socket
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nnew")
+                .await
+                .unwrap();
+        });
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .proxy(reqwest::Proxy::all(format!("http://127.0.0.1:{port}")).unwrap())
+            .timeout(std::time::Duration::from_secs(3))
+            .build()
+            .unwrap();
+        assert_eq!(
+            client
+                .get("http://example.com/test")
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap(),
+            "new"
+        );
+        server.await.unwrap();
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(150), old.accept())
+                .await
+                .is_err()
+        );
+    }
     #[test]
     fn repairs_and_undo_survive_next_launch_and_histories_do_not_cross_profiles() {
         let root = tempfile::tempdir().unwrap();

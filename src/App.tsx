@@ -110,7 +110,19 @@ export default function App() {
   useEffect(()=>{if(quitting)quitDialog.current?.showModal();else quitDialog.current?.close();},[quitting]);
   useEffect(()=>{if(!native)return;let stop:(()=>void)|undefined;let cancelled=false;void listen('request-quit',()=>{setQuitError('');setQuitting(true);}).then(fn=>{if(cancelled)fn();else stop=fn;});return()=>{cancelled=true;stop?.();};},[]);
   async function selectProfile(p:BrowserProfile,showHistory=false){if(busy)return;setActiveProfile(p.id);setActiveProfileState(p);setBrowser(p.browser);localStorage.setItem('claudedone.active-profile',p.id);setPage(showHistory?'history':'overview');setScan(null);setGroup('all');setOnlyPending(false);await perform('正在检测副本环境',()=>refresh(p.browser));}
-  async function navigate(next:Page){if(busy)return;if(!activeProfile&&['overview','browser'].includes(next)){const list=await listProfiles();const saved=localStorage.getItem('claudedone.active-profile');const p=list.find(p=>p.id===saved&&!p.deletedAt)||list.find(p=>!p.deletedAt);if(!p){notify('请先创建浏览器副本。');setPage('profiles');return;}await selectProfile(p);setPage(next);return;}if(next==='computer'||next==='code'){setActiveProfile(null);setActiveProfileState(null);setScan(null);setPage(next);await perform('正在检测电脑环境',()=>refresh());}else{setPage(next);if(['overview','browser','history'].includes(next))await perform('正在读取环境',()=>refresh());}}
+  async function navigate(next:Page){
+    if(busy)return;
+    if(next==='computer'||next==='code'){
+      setActiveProfile(null);setActiveProfileState(null);setScan(null);setPage(next);await perform('正在检测电脑环境',()=>refresh());return;
+    }
+    if(next==='overview'||next==='browser'||next==='history'&&activeProfile){
+      try{const list=await listProfiles();const saved=activeProfile?.id||localStorage.getItem('claudedone.active-profile');const p=list.find(p=>p.id===saved&&!p.deletedAt)||list.find(p=>!p.deletedAt);
+        if(!p){notify('请先创建浏览器副本。');setPage('profiles');return;}
+        setActiveProfile(p.id);setActiveProfileState(p);setBrowser(p.browser);setScan(null);setPage(next);await perform('正在检测副本环境',()=>refresh(p.browser));
+      }catch(e){notify(String(e),true);}return;
+    }
+    setPage(next);if(next==='history')await perform('正在读取修复记录',()=>refresh());
+  }
   async function quit(){if(busy)return;setBusy('正在关闭副本并退出');try{await quitApplication(true);setQuitting(false);}catch(e){setQuitError(String(e));}finally{setBusy(null);}}
   useEffect(() => { if (toast) { const timer = setTimeout(() => setToast(null), toast.error ? 9000 : 5000); return () => clearTimeout(timer); } }, [toast]);
   useEffect(() => { if (modal) dialogRef.current?.showModal(); else dialogRef.current?.close(); }, [modal]);
