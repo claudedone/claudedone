@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<title>NodeCloak favicon</title>
+<rect width="64" height="64" rx="12" fill="#11151B"/>
+<g transform="translate(32 33) scale(0.8) translate(-32 -32)"><path fill="#F6F4EF" d="M10 58 L10 30 C10 17 20 6 32 6 C44 6 54 17 54 30 L54 58 Q43 46 32 58 Q21 46 10 58 Z"/><circle cx="24" cy="29" r="6" fill="#3DDC97"/><circle cx="40" cy="29" r="6" fill="#3DDC97"/></g>
+</svg>

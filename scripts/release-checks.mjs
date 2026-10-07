@@ -22,7 +22,7 @@ test('a mismatched tag or native version blocks publication',t=>{
 test('incomplete, stale or empty asset sets cannot be released',t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'claudedone-assets-'));
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
-  const names=[...packageNames('0.5.8'),...updaterAssets('0.5.8'),'ClaudeDone_0.5.8_THIRD_PARTY_NOTICES.tar.gz'];
+  const names=[...packageNames('0.5.8'),...updaterAssets('0.5.8'),'NodeCloak_0.5.8_THIRD_PARTY_NOTICES.tar.gz'];
   for(const name of names.slice(1)) fs.writeFileSync(path.join(root,name),'package');
   assert.throws(()=>verifyReleaseAssets(root,'0.5.8'),/all four/);
   fs.writeFileSync(path.join(root,names[0]),'package');

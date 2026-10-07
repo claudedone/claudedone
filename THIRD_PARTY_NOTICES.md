@@ -1,6 +1,6 @@
 # Third-party notices
 
-Claude Done original source and the repository icon are MIT licensed. Dependencies retain their own licenses. This inventory describes the pinned source snapshot; it does not change upstream license terms.
+NodeCloak original source and the repository icon are MIT licensed. Dependencies retain their own licenses. This inventory describes the pinned source snapshot; it does not change upstream license terms.
 
 ## JavaScript dependencies
 

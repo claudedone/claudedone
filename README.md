@@ -1,4 +1,4 @@
-# Claude Done
+# NodeCloak
 
 Windows 与 macOS 的 Claude 环境诊断和可撤销配置工具。基于 Tauri 2、React、TypeScript 和 Rust。
 
@@ -58,7 +58,7 @@ GitHub Actions 会测试和构建 Windows x64、Mac Apple Silicon 和 Intel；�
 
 ## 配置与隐私
 
-应用数据位于 `%APPDATA%/com.claudedone`（Windows）或 `~/Library/Application Support/com.claudedone`（macOS）。旧 `com.claudeready.desktop` 数据目录兼容保留，源码中的旧内部名称不应直接删除。
+新安装的数据位于 `%APPDATA%/com.nodecloak`（Windows）或 `~/Library/Application Support/com.nodecloak`（macOS）。升级优先复用已有 `com.claudedone`，再兼容 `com.claudeready.desktop`；原路径保持不变以保护含绝对路径的修复记录。旧代理凭据命名空间继续保留。
 
 工具不读取 Claude 密钥、浏览器 cookies 或登录凭据，不上传修复备份。连接检查访问 Claude 和 Cloudflare，更新检查和下载访问 GitHub Releases；这些服务会看到普通网络请求和客户端 IP。专用浏览器需要用户自行登录。代理密码保存于 Windows 凭据管理器或 macOS 钥匙串，不写入副本 JSON、命令行或修复记录。关闭主窗口会隐藏到托盘并保持代理运行；退出应用、安装更新前先关闭专用副本。
 

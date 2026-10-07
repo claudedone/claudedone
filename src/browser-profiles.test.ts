@@ -28,4 +28,49 @@ describe('browser profiles',()=>{
     const {defaults,validateDraft}=await import('./browser-profiles');const d=defaults();d.name='valid';expect(validateDraft(d)).toBeNull();
     d.preferences.startupUrl='javascript:alert(1)';expect(validateDraft(d)).toBeTruthy();d.preferences.startupUrl='about:blank';d.password='x\nheader';expect(validateDraft(d)).toBeTruthy();
   });
+  it('migrates old profile preferences without changing existing values',async()=>{
+    const api=await import('./browser-profiles');const old=api.defaults();old.name='existing';
+    const {advanced:_,regional:__,...preferences}=old.preferences;
+    storage.set('claudedone.profiles-demo.v1',JSON.stringify([{...old,preferences,id:'legacy-firefox',running:true}]));
+    const [p]=await api.listProfiles();expect(p.preferences.advanced).toEqual(api.advancedDefaults());
+    expect(p.preferences.regional).toEqual(api.regionalDefaults());
+    expect(p.preferences.language).toBe(preferences.language);expect(p.running).toBe(false);
+  });
+  it('copies advanced settings independently, defers running edits and rejects unsupported browser options',async()=>{
+    const api=await import('./browser-profiles');const d=api.defaults();d.name='strict';
+    d.preferences.advanced.resistFingerprinting=true;d.preferences.advanced.notifications='block';
+    const first=await api.saveProfile(d);const copy=await api.saveProfile({...d,name:'copy'},undefined,first.id);
+    expect(copy.preferences.advanced).toEqual(d.preferences.advanced);
+    await api.startProfile(first.id);d.preferences.advanced.blockImages=true;
+    await api.saveProfile(d,first.id);
+    expect((await api.listProfiles()).find(p=>p.id===first.id)?.pendingRestart).toBe(true);
+    expect((await api.listProfiles()).find(p=>p.id===copy.id)?.preferences.advanced.blockImages).toBe(false);
+    expect(api.validateDraft({...d,browser:'chrome'})).toContain('Firefox');
+    expect(api.validateDraft({...d,preferences:{...d.preferences,advanced:{...d.preferences.advanced,notifications:'allow' as never}}})).toBeTruthy();
+  });
+  it('validates custom locations, timezones and strict-mode conflicts',async()=>{
+    const api=await import('./browser-profiles');const d=api.defaults();d.name='region';
+    d.preferences.regional.timezoneMode='custom';d.preferences.regional.timezone='America/Los_Angeles';
+    d.preferences.regional.locationMode='custom';d.preferences.advanced.location='allow';
+    expect(api.validateDraft(d)).toBeNull();expect(api.needsRegionalControl(d.preferences)).toBe(true);
+    d.preferences.regional.latitude=91;expect(api.validateDraft(d)).toContain('经纬度');
+    d.preferences.regional.latitude=NaN;expect(api.validateDraft(d)).toContain('经纬度');
+    d.preferences.regional.latitude=35.68;d.preferences.regional.timezone='Invalid/Zone';expect(api.validateDraft(d)).toContain('时区');
+    d.preferences.regional.timezone='Asia/Tokyo';d.preferences.advanced.resistFingerprinting=true;expect(api.validateDraft(d)).toContain('冲突');
+    d.preferences.advanced.resistFingerprinting=false;d.preferences.regional.locationMode='system';expect(api.validateDraft(d)).toContain('允许定位');
+  });
+  it('stores independent regional settings and defers updates while running',async()=>{
+    const api=await import('./browser-profiles');const d=api.defaults();d.name='IP matched';
+    Object.assign(d.preferences.regional,{languageMode:'ip',timezoneMode:'ip',locationMode:'ip'});
+    d.preferences.advanced.location='allow';
+    const first=await api.saveProfile(d);const copy=await api.saveProfile({...d,name:'copy'},undefined,first.id);
+    await api.startProfile(first.id);Object.assign(d.preferences.regional,{timezoneMode:'custom',timezone:'Europe/Berlin',locationMode:'custom',latitude:52.52,longitude:13.405});
+    await api.saveProfile(d,first.id);const profiles=await api.listProfiles();
+    expect(profiles.find(p=>p.id===first.id)?.pendingRestart).toBe(true);
+    expect(profiles.find(p=>p.id===copy.id)?.preferences.regional.timezoneMode).toBe('ip');
+    const normalized=api.normalizePreferences(d.preferences);normalized.regional.latitude=0;
+    expect(d.preferences.regional.latitude).toBe(52.52);
+    const match=await api.matchRegion(d);expect(match.timezone).toBe('Asia/Singapore');expect(match.language).toBe('en-SG,en');
+  });
+
 });

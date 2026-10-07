@@ -69,7 +69,7 @@ const initial = (browser: BrowserId): Scan => ({
     { id: 'fonts', status: 'manual', value: '发现 2 个中文字体文件', detail: '建议保留系统字体，可在浏览器中进一步确认字体检测结果。', fixable: false },
     { id:'tracking',status:'warning',value:'DNT 尚未开启 · GPC 待网页复检',detail:'隐私偏好不保证停止跟踪。',fixable:true },
     ...(['webgl','screen','networkInfo','plugins'] as const).map(id => ({id,status:'manual' as const,value:'需要在专用浏览器中实测',detail:'仅网页采集，不能根据设备特征判断账号风险。',fixable:false})),
-    { id: 'emoji', status: 'manual', value: '需要在浏览器中检测', detail: '请进入 Claude Done 官网的环境检测页，查看当前浏览器的平台风格。', fixable: false },
+    { id: 'emoji', status: 'manual', value: '需要在浏览器中检测', detail: '请进入 NodeCloak 官网的环境检测页，查看当前浏览器的平台风格。', fixable: false },
   ],
 });
 function demoFor(browser:BrowserId):Scan {const key=activeProfileId??browser;if(!demos[key]){demos[key]=initial(browser);if(browser==='firefox'){const fonts=demos[key].checks.find(c=>c.id==='fonts')!;fonts.fixable=true;fonts.value='按需限制字体 · 保留电脑字体';}}return demos[key];}

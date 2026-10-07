@@ -18,9 +18,11 @@ fn has_environment_data(root: &Path) -> bool {
 pub fn resolve(current: PathBuf) -> PathBuf {
     if !has_environment_data(&current) {
         if let Some(parent) = current.parent() {
-            let legacy = parent.join(LEGACY_IDENTIFIER);
-            if has_environment_data(&legacy) {
-                return legacy;
+            for identifier in ["com.claudedone", LEGACY_IDENTIFIER] {
+                let legacy = parent.join(identifier);
+                if has_environment_data(&legacy) {
+                    return legacy;
+                }
             }
         }
     }
@@ -30,6 +32,19 @@ pub fn resolve(current: PathBuf) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn nodecloak_reuses_claudedone_before_older_legacy_data() {
+        let directory = tempfile::tempdir().unwrap();
+        let previous = directory.path().join("com.claudedone");
+        let oldest = directory.path().join(LEGACY_IDENTIFIER);
+        std::fs::create_dir_all(previous.join("profiles")).unwrap();
+        std::fs::create_dir_all(oldest.join("browser-edge")).unwrap();
+        let current = directory.path().join("com.nodecloak");
+        assert_eq!(resolve(current.clone()), previous);
+        std::fs::create_dir_all(&current).unwrap();
+        std::fs::write(current.join("profiles.json"), "{}").unwrap();
+        assert_eq!(resolve(current.clone()), current);
+    }
     #[test]
     fn existing_profiles_are_reused_without_moving_them() {
         let directory = tempfile::tempdir().unwrap();

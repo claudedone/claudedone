@@ -672,8 +672,45 @@ pub fn spawn_browser_with_proxy(
     mode: &str,
     relay: Option<u16>,
 ) -> Result<(), String> {
+    spawn_browser_impl(browser, profile, url, mode, relay, false)
+}
+pub fn spawn_controlled_browser(
+    browser: &str,
+    profile: &Path,
+    mode: &str,
+    relay: Option<u16>,
+) -> Result<(), String> {
+    ensure_profile_closed(profile)?;
+    let marker = profile.join(if browser == "firefox" {
+        "WebDriverBiDiServer.json"
+    } else {
+        "DevToolsActivePort"
+    });
+    if marker.exists() {
+        std::fs::remove_file(&marker).map_err(|_| "无法清理旧的浏览器控制标记")?;
+    }
+    spawn_browser_impl(browser, profile, "about:blank", mode, relay, true)
+}
+fn spawn_browser_impl(
+    browser: &str,
+    profile: &Path,
+    url: &str,
+    mode: &str,
+    relay: Option<u16>,
+    controlled: bool,
+) -> Result<(), String> {
     let exe = browser_path(browser)?;
     let mut cmd = command(exe.to_str().ok_or("浏览器路径格式无效")?);
+    if controlled {
+        cmd.arg("--remote-debugging-port=0");
+        if browser != "firefox" {
+            cmd.args([
+                "--remote-debugging-address=127.0.0.1",
+                "--disable-background-mode",
+            ]);
+        }
+    }
+
     if browser == "firefox" {
         ensure_profile_closed(profile)?;
         let profile = prepare_firefox_profile(profile)?;
@@ -937,7 +974,7 @@ pub fn launcher_contents() -> &'static str {
 
 pub fn launch_cli(path: &Path) -> Result<(), String> {
     if !cli_installed() {
-        return Err("未找到 Claude Code，请先安装后重启 Claude Done。".into());
+        return Err("未找到 Claude Code，请先安装后重启 NodeCloak。".into());
     }
     #[cfg(target_os = "windows")]
     {

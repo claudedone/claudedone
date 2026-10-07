@@ -60,7 +60,7 @@ jobs:
         run: node scripts/collect-release-notices.mjs ${{ matrix.platform }} ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
-          name: claude-done-${{ matrix.platform }}
+          name: nodecloak-${{ matrix.platform }}
           path: |
             release-assets/*
             release-notices/**
@@ -78,14 +78,14 @@ jobs:
           node-version: 24
       - uses: actions/download-artifact@v5
         with:
-          pattern: claude-done-*
+          pattern: nodecloak-*
           path: .
           merge-multiple: true
       - name: Package notices
         shell: bash
         run: |
           version=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")
-          tar -czf "release-assets/ClaudeDone_${version}_THIRD_PARTY_NOTICES.tar.gz" -C release-notices .
+          tar -czf "release-assets/NodeCloak_${version}_THIRD_PARTY_NOTICES.tar.gz" -C release-notices .
       - name: Verify assets and write checksums
         run: node scripts/prepare-release.mjs
         env:
@@ -103,5 +103,5 @@ jobs:
             gh release upload "$RELEASE_TAG" release-assets/* --clobber
             gh release edit "$RELEASE_TAG" --notes-file .release-notes.md --draft=false
           else
-            gh release create "$RELEASE_TAG" release-assets/* --verify-tag --title "Claude Done $RELEASE_TAG" --notes-file .release-notes.md
+            gh release create "$RELEASE_TAG" release-assets/* --verify-tag --title "NodeCloak $RELEASE_TAG" --notes-file .release-notes.md
           fi

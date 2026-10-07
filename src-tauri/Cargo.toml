@@ -1,15 +1,15 @@
 [package]
-name = "claude-done"
-version = "0.6.0"
-description = "A reversible environment assistant for Claude"
-authors = ["Claude Done contributors"]
+name = "nodecloak"
+version = "0.7.0"
+description = "Independent browser workspaces and environment diagnostics"
+authors = ["NodeCloak contributors"]
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/claudedone/claudedone"
 homepage = "https://claudedone.com"
 
 [lib]
-name = "claude_ready_lib"
+name = "nodecloak_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -32,6 +32,8 @@ tokio = { version = "1", features = ["net", "io-util", "sync", "time", "macros",
 tokio-native-tls = "0.3"
 keyring = { version = "3.6.3", features = ["apple-native", "windows-native"] }
 sysinfo = { version = "0.37", default-features = false, features = ["system"] }
+tungstenite = "0.28"
+chrono-tz = "0.10"
 
 [dev-dependencies]
 minisign-verify = "0.2"

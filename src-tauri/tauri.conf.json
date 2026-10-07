@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Claude Done",
-  "version": "0.6.0",
-  "identifier": "com.claudedone",
+  "productName": "NodeCloak",
+  "version": "0.7.0",
+  "identifier": "com.nodecloak",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,12 +13,12 @@
     "windows": [
       {
         "label": "main",
-        "title": "Claude Done · 环境助手",
+        "title": "NodeCloak · Browser workspace",
         "width": 1220,
         "height": 860,
         "minWidth": 900,
         "minHeight": 660,
-        "backgroundColor": "#F6F7F3"
+        "backgroundColor": "#11151B"
       }
     ],
     "security": {
@@ -35,7 +35,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "shortDescription": "Claude 环境诊断与可撤销修复工具",
+    "shortDescription": "Independent browser workspaces, proxies and environment diagnostics",
     "createUpdaterArtifacts": true
   },
   "plugins": {

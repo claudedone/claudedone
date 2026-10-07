@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<title>NodeCloak app icon</title>
+<rect width="64" height="64" rx="14.3" fill="#11151B"/>
+<g transform="translate(32 32) scale(0.72) translate(-32 -32)"><path fill="#F6F4EF" fill-rule="evenodd" d="M12 56 L12 30 C12 18 21 8 32 8 C43 8 52 18 52 30 L52 56 Q45.33 46 38.67 56 Q32 46 25.33 56 Q18.67 46 12 56 Z M29.1024 28.1 A4.2 4.2 0 1 0 29.1024 29.9 L34.8976 29.9 A4.2 4.2 0 1 0 34.8976 28.1 Z"/><circle cx="25" cy="29" r="2.2" fill="#3DDC97"/><circle cx="39" cy="29" r="2.2" fill="#3DDC97"/></g>
+</svg>

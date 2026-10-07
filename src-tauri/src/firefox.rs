@@ -46,6 +46,15 @@ fn allowed(key: &str) -> bool {
         "network.proxy.no_proxies_on",
         "network.proxy.socks_remote_dns",
         "network.proxy.failover_direct",
+        "permissions.default.desktop-notification",
+        "permissions.default.geo",
+        "geo.enabled",
+        "permissions.default.camera",
+        "permissions.default.microphone",
+        "permissions.default.image",
+        "webgl.disabled",
+        "privacy.resistFingerprinting",
+        "remote.prefs.recommended",
     ]
     .contains(&key)
         || ["fonts", "language", "webrtc", "dns", "tracking", "startup"]

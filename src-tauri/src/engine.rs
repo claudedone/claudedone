@@ -323,7 +323,7 @@ pub async fn scan_network(mut scan: Scan) -> Scan {
         .no_proxy()
         .timeout(Duration::from_secs(10))
         .redirect(reqwest::redirect::Policy::limited(3))
-        .user_agent("ClaudeDone/0.5 (environment diagnostics)")
+        .user_agent("NodeCloak/0.7 (environment diagnostics)")
         .build()
     {
         Ok(c) => c,

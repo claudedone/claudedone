@@ -407,9 +407,14 @@ pub struct ProxyTest {
     pub target: String,
 }
 pub async fn test(up: Upstream) -> Result<ProxyTest, String> {
-    up.validate()?;
     let mode = up.config.mode.clone();
     let started = std::time::Instant::now();
+    let (client, relay) = http_client(up).await?;
+    test_with_client(client, relay, mode, started).await
+}
+pub async fn http_client(up: Upstream) -> Result<(reqwest::Client, Option<Relay>), String> {
+    up.validate()?;
+    let mode = up.config.mode.clone();
     let relay = if up.config.custom() {
         Some(start(up, 0).await?)
     } else {
@@ -427,6 +432,14 @@ pub async fn test(up: Upstream) -> Result<ProxyTest, String> {
         builder = builder.no_proxy();
     }
     let client = builder.build().map_err(|_| "无法准备网络检测")?;
+    Ok((client, relay))
+}
+async fn test_with_client(
+    client: reqwest::Client,
+    relay: Option<Relay>,
+    mode: String,
+    started: std::time::Instant,
+) -> Result<ProxyTest, String> {
     let result = client
         .get("https://www.cloudflare.com/cdn-cgi/trace")
         .send()
@@ -550,7 +563,7 @@ mod tests {
                         }
                     }
                     let body = if req.contains("/session HTTP") {
-                        "<!doctype html><title>Claude Done release QA</title><p>Temporary browser isolation test</p><script>fetch('/probe')</script>"
+                        "<!doctype html><title>NodeCloak release QA</title><p>Temporary browser isolation test</p><script>fetch('/probe')</script>"
                     } else {
                         "ok"
                     };

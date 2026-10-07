@@ -1,3 +1,4 @@
+mod browser_control;
 mod data_root;
 mod engine;
 mod firefox;
@@ -6,6 +7,7 @@ mod platform;
 mod profile_commands;
 mod profiles;
 mod proxy;
+mod regional;
 
 #[tauri::command]
 fn is_portable_build() -> Result<bool, String> {
@@ -364,12 +366,12 @@ pub fn run() {
                 menu::{Menu, MenuItem},
                 tray::TrayIconBuilder,
             };
-            let show = MenuItem::with_id(app, "show", "打开 Claude Done", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "打开 NodeCloak", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出…", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("Claude Done · 浏览器副本与代理保持运行")
+                .tooltip("NodeCloak · 浏览器副本与代理保持运行")
                 .menu(&menu)
                 .on_menu_event(|app, event| {
                     if let Some(window) = app.get_webview_window("main") {
@@ -406,6 +408,7 @@ pub fn run() {
             profile_commands::delete_profile,
             profile_commands::restore_profile,
             profile_commands::test_profile_proxy,
+            profile_commands::match_profile_region,
             profile_commands::start_profile,
             profile_commands::close_profile,
             profile_commands::restart_profile,
@@ -419,7 +422,7 @@ pub fn run() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("Failed to start Claude Done")
+        .expect("Failed to start NodeCloak")
         .run(|app, event| {
             if let tauri::RunEvent::ExitRequested { code, api, .. } = event {
                 if code.is_none() {

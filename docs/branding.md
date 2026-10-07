@@ -1,7 +1,7 @@
-# Open-source artwork
+# NodeCloak branding
 
-`public/mark.svg` is the repository's original green C/check icon, available under the project MIT license. Tauri platform icons in `src-tauri/icons/` are generated from this source using `npm run tauri icon public/mark.svg`.
+NodeCloak uses the user-supplied original ghost symbol and app icon, without changing geometry or colors. Primary on Ink; positive on Paper. Palette: Ink #11151B, Paper #F6F4EF, Phosphor #3DDC97, Deep #0B6E48. UI uses Sora and JetBrains Mono; their OFL licenses are bundled alongside the self-hosted fonts.
 
-The previous production artwork derived from an Icons8 asset is not included in this source repository. The website and existing official 0.5.8 downloads continue to use their existing artwork. Do not copy those assets into a fork without checking their separate license.
+The new bundle identifier is `com.nodecloak`. Existing `com.claudedone` and `com.claudeready.desktop` data is reused in place because repair journals contain absolute paths. The legacy proxy credential namespace is intentionally retained so upgrades can read existing credentials. Repository and Telegram URLs remain existing destinations until their owners move them.
 
-The source license does not grant rights to Anthropic or other third-party trademarks. Claude Done is an independent project.
+Product functionality is unchanged by artwork: each browser keeps its own login and storage. Closing a window does not erase its data. Region control can expose an automation flag; no claim of untraceability is made.

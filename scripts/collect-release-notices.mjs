@@ -8,9 +8,10 @@ if(platforms[platform]!==target) throw new Error('Unknown license target');
 const version=releaseVersion();
 const output=path.join(projectRoot,'release-notices',platform);
 fs.mkdirSync(output,{recursive:true});
-fs.copyFileSync(path.join(projectRoot,'LICENSE'),path.join(output,'ClaudeDone-LICENSE'));
+fs.copyFileSync(path.join(projectRoot,'LICENSE'),path.join(output,'NodeCloak-LICENSE'));
 fs.copyFileSync(path.join(projectRoot,'docs/branding.md'),path.join(output,'branding.md'));
-const lines=[`# Claude Done ${version} — ${platform}`, '', 'Dependency license declarations for this build. License and notice files found in installed packages are included below. Development/build dependencies are also listed. Dependencies are not relicensed by Claude Done.', '', '| Package | Version | License |', '| --- | --- | --- |'];
+for (const name of ['Sora-OFL.txt','JetBrainsMono-OFL.txt']) fs.copyFileSync(path.join(projectRoot,'public/brand/fonts',name),path.join(output,name));
+const lines=[`# NodeCloak ${version} — ${platform}`, '', 'Dependency license declarations for this build. License and notice files found in installed packages are included below. Development/build dependencies are also listed. Dependencies are not relicensed by NodeCloak.', '', '| Package | Version | License |', '| --- | --- | --- |'];
 function notices(source,destination,extra) {
   if(!fs.existsSync(source)) return;
   const files=fs.readdirSync(source).filter(name=>/^(license|licence|copying|notice)/i.test(name) && fs.statSync(path.join(source,name)).isFile()).map(name=>path.join(source,name));

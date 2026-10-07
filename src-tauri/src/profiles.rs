@@ -9,6 +9,26 @@ use std::{
     sync::Mutex,
 };
 
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum PermissionMode {
+    #[default]
+    Ask,
+    Block,
+    Allow,
+}
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AdvancedSettings {
+    pub notifications: PermissionMode,
+    pub location: PermissionMode,
+    pub camera: PermissionMode,
+    pub microphone: PermissionMode,
+    pub block_images: bool,
+    pub block_webgl: bool,
+    pub resist_fingerprinting: bool,
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Preferences {
@@ -16,6 +36,10 @@ pub struct Preferences {
     pub privacy: bool,
     pub font_restriction: bool,
     pub startup_url: String,
+    #[serde(default)]
+    pub advanced: AdvancedSettings,
+    #[serde(default)]
+    pub regional: crate::regional::RegionalSettings,
 }
 impl Default for Preferences {
     fn default() -> Self {
@@ -24,6 +48,8 @@ impl Default for Preferences {
             privacy: true,
             font_restriction: false,
             startup_url: "https://claude.ai".into(),
+            advanced: AdvancedSettings::default(),
+            regional: crate::regional::RegionalSettings::default(),
         }
     }
 }
@@ -54,6 +80,8 @@ pub struct Profile {
     pub preferences_dirty: bool,
     #[serde(default)]
     pub credential_refs: Vec<String>,
+    #[serde(default)]
+    pub last_region: Option<crate::regional::ResolvedRegion>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -65,6 +93,8 @@ pub struct ProfileView {
     pub browser_available: bool,
     pub has_password: bool,
     pub proxy_ready: bool,
+    pub regional_ready: bool,
+    pub regional_error: Option<String>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,10 +118,16 @@ struct Registry {
     schema: u32,
     profiles: Vec<Profile>,
 }
-pub struct Runtime(pub Mutex<HashMap<String, Relay>>);
+pub struct Runtime(
+    pub Mutex<HashMap<String, Relay>>,
+    pub crate::browser_control::Runtime,
+);
 impl Default for Runtime {
     fn default() -> Self {
-        Self(Mutex::new(HashMap::new()))
+        Self(
+            Mutex::new(HashMap::new()),
+            crate::browser_control::Runtime::default(),
+        )
     }
 }
 fn stamp() -> String {
@@ -122,6 +158,46 @@ fn existing_preferences(root: &Path, browser: &str) -> Preferences {
         }
         prefs.font_restriction = crate::firefox::configured(&dir, "fonts").unwrap_or(false);
         prefs.privacy = crate::firefox::configured(&dir, "webrtc").unwrap_or(false);
+        for (key, target) in [
+            (
+                "permissions.default.desktop-notification",
+                &mut prefs.advanced.notifications,
+            ),
+            ("permissions.default.geo", &mut prefs.advanced.location),
+            ("permissions.default.camera", &mut prefs.advanced.camera),
+            (
+                "permissions.default.microphone",
+                &mut prefs.advanced.microphone,
+            ),
+        ] {
+            if let Ok(value) = crate::firefox::snapshot(&dir, key) {
+                if value["user"] == 2 || (value["user"].is_null() && value["runtime"] == 2) {
+                    *target = PermissionMode::Block;
+                }
+            }
+        }
+        for (key, target, expected) in [
+            (
+                "permissions.default.image",
+                &mut prefs.advanced.block_images,
+                serde_json::json!(2),
+            ),
+            (
+                "webgl.disabled",
+                &mut prefs.advanced.block_webgl,
+                serde_json::json!(true),
+            ),
+            (
+                "privacy.resistFingerprinting",
+                &mut prefs.advanced.resist_fingerprinting,
+                serde_json::json!(true),
+            ),
+        ] {
+            if let Ok(value) = crate::firefox::snapshot(&dir, key) {
+                *target = value["user"] == expected
+                    || (value["user"].is_null() && value["runtime"] == expected);
+            }
+        }
     } else if let Ok(bytes) = std::fs::read(dir.join("Default/Preferences")) {
         if let Ok(data) = serde_json::from_slice::<serde_json::Value>(&bytes) {
             if let Some(language) = data
@@ -134,6 +210,18 @@ fn existing_preferences(root: &Path, browser: &str) -> Preferences {
                 .pointer("/webrtc/ip_handling_policy")
                 .and_then(|v| v.as_str())
                 == Some("disable_non_proxied_udp");
+            let settings = &data["profile"]["default_content_setting_values"];
+            for (key, target) in [
+                ("notifications", &mut prefs.advanced.notifications),
+                ("geolocation", &mut prefs.advanced.location),
+                ("media_stream_camera", &mut prefs.advanced.camera),
+                ("media_stream_mic", &mut prefs.advanced.microphone),
+            ] {
+                if settings[key] == 2 {
+                    *target = PermissionMode::Block;
+                }
+            }
+            prefs.advanced.block_images = settings["images"] == 2;
         }
     }
     prefs
@@ -190,6 +278,7 @@ pub fn load(root: &Path) -> Result<Vec<Profile>, String> {
                 preferences_managed: false,
                 preferences_dirty: false,
                 credential_refs: vec![],
+                last_region: None,
             })
             .collect::<Vec<_>>();
         save(root, &profiles)?;
@@ -342,6 +431,15 @@ pub fn draft_upstream(root: &Path, id: Option<&str>, draft: &Draft) -> Result<Up
     Ok(up)
 }
 fn validate(draft: &Draft) -> Result<(), String> {
+    crate::regional::validate(&draft.preferences)?;
+    let advanced = &draft.preferences.advanced;
+    if draft.browser != "firefox"
+        && (advanced.resist_fingerprinting
+            || advanced.block_webgl
+            || draft.preferences.font_restriction)
+    {
+        return Err("字体限制、严格指纹保护和 WebGL 禁用仅适用于 Firefox".into());
+    }
     if draft.name.trim().is_empty()
         || draft.name.chars().count() > 60
         || draft.notes.chars().count() > 1000
@@ -443,6 +541,7 @@ pub fn create(root: &Path, draft: Draft, copy_id: Option<&str>) -> Result<Profil
         preferences_managed: true,
         preferences_dirty: true,
         credential_refs: refs,
+        last_region: None,
     };
     apply_preferences(root, &p)?;
     p.preferences_dirty = false;
@@ -543,6 +642,43 @@ pub fn apply_preferences(root: &Path, p: &Profile) -> Result<(), String> {
                     },
                 ),
             ]);
+            let advanced = &p.preferences.advanced;
+            for (key, mode) in [
+                (
+                    "permissions.default.desktop-notification",
+                    &advanced.notifications,
+                ),
+                ("permissions.default.geo", &advanced.location),
+                ("permissions.default.camera", &advanced.camera),
+                ("permissions.default.microphone", &advanced.microphone),
+            ] {
+                fields.push((
+                    key,
+                    serde_json::json!(match mode {
+                        PermissionMode::Block => 2,
+                        PermissionMode::Allow => 1,
+                        _ => 0,
+                    }),
+                ));
+            }
+            fields.extend([
+                (
+                    "geo.enabled",
+                    serde_json::json!(advanced.location != PermissionMode::Block),
+                ),
+                (
+                    "permissions.default.image",
+                    serde_json::json!(if advanced.block_images { 2 } else { 1 }),
+                ),
+                ("webgl.disabled", serde_json::json!(advanced.block_webgl)),
+                (
+                    "privacy.resistFingerprinting",
+                    serde_json::json!(advanced.resist_fingerprinting),
+                ),
+            ]);
+            if crate::regional::needs_control(&p.preferences) {
+                fields.push(("remote.prefs.recommended", serde_json::json!(false)));
+            }
         }
         if p.proxy.custom() && !p.preferences_dirty {
             fields.push(("media.peerconnection.enabled", serde_json::json!(false)));
@@ -566,6 +702,15 @@ pub fn apply_preferences(root: &Path, p: &Profile) -> Result<(), String> {
         if !data.is_object() {
             return Err("副本设置格式无效".into());
         }
+        if crate::regional::needs_control(&p.preferences) {
+            if data.get("session").is_none() {
+                data["session"] = serde_json::json!({});
+            }
+            if !data["session"].is_object() {
+                return Err("浏览器启动字段结构无效，未覆盖".into());
+            }
+            data["session"]["restore_on_startup"] = serde_json::json!(5);
+        }
         if p.preferences_managed && p.preferences_dirty {
             if data.get("intl").is_none() {
                 data["intl"] = serde_json::json!({});
@@ -575,6 +720,47 @@ pub fn apply_preferences(root: &Path, p: &Profile) -> Result<(), String> {
             }
             data["intl"]["accept_languages"] = serde_json::json!(p.preferences.language);
             data["intl"]["selected_languages"] = serde_json::json!(p.preferences.language);
+            // Preserve per-site exceptions, cookies and unrelated browser preferences.
+            if data.get("profile").is_none() {
+                data["profile"] = serde_json::json!({});
+            }
+            if !data["profile"].is_object() {
+                return Err("浏览器网站权限字段结构无效，未覆盖".into());
+            }
+            if data["profile"]
+                .get("default_content_setting_values")
+                .is_none()
+            {
+                data["profile"]["default_content_setting_values"] = serde_json::json!({});
+            }
+            if !data["profile"]["default_content_setting_values"].is_object() {
+                return Err("浏览器默认权限字段结构无效，未覆盖".into());
+            }
+            let advanced = &p.preferences.advanced;
+            let values = &mut data["profile"]["default_content_setting_values"];
+            for (key, mode) in [
+                ("notifications", &advanced.notifications),
+                ("geolocation", &advanced.location),
+                ("media_stream_camera", &advanced.camera),
+                ("media_stream_mic", &advanced.microphone),
+            ] {
+                values[key] = serde_json::json!(match mode {
+                    PermissionMode::Block => 2,
+                    PermissionMode::Allow => 1,
+                    _ => 3,
+                });
+            }
+            values["images"] = serde_json::json!(if advanced.block_images { 2 } else { 1 });
+            if advanced.location == PermissionMode::Block {
+                if let Some(exceptions) =
+                    data.pointer_mut("/profile/content_settings/exceptions/geolocation")
+                {
+                    let sites = exceptions
+                        .as_object_mut()
+                        .ok_or("浏览器定位授权结构无效，未覆盖")?;
+                    sites.retain(|_, entry| entry["setting"] != 1);
+                }
+            }
         }
         if (p.preferences_managed && p.preferences_dirty) || p.proxy.custom() {
             if data.get("webrtc").is_none() {
@@ -607,6 +793,7 @@ pub fn remove(root: &Path, id: &str, purge: bool, runtime: &Runtime) -> Result<(
     let p = &profiles[index];
     platform::ensure_profile_closed(&path(root, p)?)?;
     runtime.0.lock().map_err(|_| "代理管理器不可用")?.remove(id);
+    runtime.1.stop(id);
     if purge {
         if p.deleted_at.is_none() {
             return Err("请先将副本移到最近删除，再彻底删除".into());
@@ -681,6 +868,10 @@ pub fn views(root: &Path, runtime: &Runtime) -> Result<Vec<ProfileView>, String>
             has_password: p.proxy.credential_ref.is_some(),
             proxy_ready: !p.active_proxy.as_ref().unwrap_or(&p.proxy).custom()
                 || relays.contains_key(&p.id),
+            regional_ready: !crate::regional::needs_control(
+                p.active_preferences.as_ref().unwrap_or(&p.preferences),
+            ) || runtime.1.ready(&p.id),
+            regional_error: runtime.1.error(&p.id),
         });
     }
     drop(relays);
@@ -740,6 +931,16 @@ pub fn mark_started(root: &Path, id: &str, port: Option<u16>) -> Result<(), Stri
     p.relay_port = port.unwrap_or(0);
     p.updated_at = stamp();
     save(root, &profiles)
+}
+pub fn remember_region(
+    root: &Path,
+    id: &str,
+    region: crate::regional::ResolvedRegion,
+) -> Result<(), String> {
+    let mut list = load(root)?;
+    let p = list.iter_mut().find(|p| p.id == id).ok_or("副本不存在")?;
+    p.last_region = Some(region);
+    save(root, &list)
 }
 pub fn remember_test(root: &Path, id: &str, result: ProxyTest) -> Result<(), String> {
     let mut profiles = load(root)?;
@@ -812,6 +1013,266 @@ pub fn history(root: &Path, id: Option<&str>) -> Result<Vec<engine::Record>, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn old_preferences_receive_safe_advanced_defaults() {
+        let prefs: Preferences = serde_json::from_value(serde_json::json!({
+            "language":"en-GB,en", "privacy":false, "fontRestriction":false, "startupUrl":"about:blank"
+        })).unwrap();
+        assert_eq!(prefs.language, "en-GB,en");
+        assert!(prefs.advanced == AdvancedSettings::default());
+        assert!(serde_json::from_value::<AdvancedSettings>(
+            serde_json::json!({"notifications":"invalid"})
+        )
+        .is_err());
+    }
+    #[tokio::test]
+    #[ignore = "Starts temporary Chrome and Firefox windows to verify browser-observed advanced preferences"]
+    async fn advanced_browser_preferences_are_observed_in_real_windows() {
+        use tokio::{
+            io::{AsyncReadExt, AsyncWriteExt},
+            net::TcpListener,
+        };
+        for browser in ["chrome", "firefox"] {
+            let root = test_dir();
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = tokio::spawn(async move {
+                loop {
+                    let (mut stream, _) = listener.accept().await.unwrap();
+                    let mut request = Vec::new();
+                    loop {
+                        let mut chunk = [0; 2048];
+                        let n = match tokio::time::timeout(
+                            std::time::Duration::from_secs(2),
+                            stream.read(&mut chunk),
+                        )
+                        .await
+                        {
+                            Ok(Ok(n)) => n,
+                            _ => break,
+                        };
+                        if n == 0 {
+                            break;
+                        }
+                        request.extend_from_slice(&chunk[..n]);
+                        if request.windows(4).any(|w| w == b"\r\n\r\n") || request.len() > 16384 {
+                            break;
+                        }
+                    }
+                    let request = String::from_utf8_lossy(&request);
+                    let path = request
+                        .lines()
+                        .next()
+                        .unwrap_or("")
+                        .split_whitespace()
+                        .nth(1)
+                        .unwrap_or("/");
+                    let report = path.starts_with("/report?").then(|| {
+                        let url = reqwest::Url::parse(&format!("http://localhost{path}")).unwrap();
+                        let data = url
+                            .query_pairs()
+                            .find(|(key, _)| key == "data")
+                            .unwrap()
+                            .1
+                            .into_owned();
+                        serde_json::from_str::<serde_json::Value>(&data).unwrap()
+                    });
+                    let (kind, body) = if path.starts_with("/image") {
+                        ("image/svg+xml", "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10'/></svg>")
+                    } else if report.is_some() {
+                        ("text/plain", "ok")
+                    } else {
+                        (
+                            "text/html",
+                            r#"<!doctype html><title>NodeCloak advanced settings test</title><p>Temporary browser preference verification</p><script>
+                    let reported=false; async function finish(imagesLoaded) { if(reported)return;reported=true;
+                      const query=async(name)=>{try{return (await navigator.permissions.query({name})).state}catch{return 'unsupported'}};
+                      const data={imagesLoaded,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,offset:new Date().getTimezoneOffset(),webgl:!!document.createElement('canvas').getContext('webgl'),notifications:await query('notifications'),location:await query('geolocation')};
+                      await fetch('/report?data='+encodeURIComponent(JSON.stringify(data)));document.body.textContent='Verification complete. This temporary window will close.';
+                    }
+                    const img=new Image();img.onload=()=>finish(true);img.onerror=()=>finish(false);img.src='/image';setTimeout(()=>finish(img.complete&&img.naturalWidth>0),1000);
+                    </script>"#,
+                        )
+                    };
+                    let response = format!("HTTP/1.1 200 OK\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n{body}",body.len());
+                    let _ = stream.write_all(response.as_bytes()).await;
+                    if let Some(report) = report {
+                        return report;
+                    }
+                }
+            });
+            let mut d = draft("Advanced settings runtime verification");
+            d.browser = browser.into();
+            d.proxy.mode = "direct".into();
+            d.preferences.advanced.notifications = PermissionMode::Block;
+            d.preferences.advanced.location = PermissionMode::Block;
+            d.preferences.advanced.block_images = true;
+            d.preferences.advanced.block_webgl = browser == "firefox";
+            d.preferences.advanced.resist_fingerprinting = browser == "firefox";
+            let p = create(root.path(), d, None).unwrap();
+            let dir = path(root.path(), &p).unwrap();
+            platform::spawn_browser_with_proxy(
+                browser,
+                &dir,
+                &format!("http://{address}/"),
+                "direct",
+                None,
+            )
+            .unwrap();
+            let result = tokio::time::timeout(std::time::Duration::from_secs(30), server).await;
+            // Close our exact temporary profile before assertions, including on failure.
+            let closed = platform::close_profile(&dir);
+            closed.unwrap();
+            let data = result
+                .expect("browser did not report preferences in time")
+                .unwrap();
+            println!("{browser} observed: {data}");
+            assert_eq!(data["imagesLoaded"], false);
+            assert_eq!(data["notifications"], "denied");
+            assert_eq!(data["location"], "denied");
+            if browser == "firefox" {
+                assert_eq!(data["webgl"], false);
+                assert_eq!(data["offset"], 0);
+                assert!(["UTC", "Atlantic/Reykjavik"].contains(&data["timezone"].as_str().unwrap()));
+            }
+        }
+    }
+    #[test]
+    fn advanced_firefox_settings_apply_restore_and_keep_unrelated_data() {
+        let root = test_dir();
+        let mut d = draft("Firefox protected");
+        d.browser = "firefox".into();
+        d.preferences.advanced.resist_fingerprinting = true;
+        d.preferences.advanced.block_webgl = true;
+        d.preferences.advanced.block_images = true;
+        d.preferences.advanced.notifications = PermissionMode::Block;
+        d.preferences.advanced.location = PermissionMode::Block;
+        d.preferences.advanced.camera = PermissionMode::Block;
+        d.preferences.advanced.microphone = PermissionMode::Block;
+        let p = create(root.path(), d, None).unwrap();
+        let dir = path(root.path(), &p).unwrap();
+        assert!(
+            existing_preferences(&base(root.path(), &p).unwrap(), "firefox").advanced
+                == p.preferences.advanced
+        );
+        for (key, value) in [
+            ("privacy.resistFingerprinting", serde_json::json!(true)),
+            ("webgl.disabled", serde_json::json!(true)),
+            ("permissions.default.image", serde_json::json!(2)),
+            ("permissions.default.geo", serde_json::json!(2)),
+            ("permissions.default.camera", serde_json::json!(2)),
+            ("permissions.default.microphone", serde_json::json!(2)),
+            (
+                "permissions.default.desktop-notification",
+                serde_json::json!(2),
+            ),
+        ] {
+            assert_eq!(crate::firefox::snapshot(&dir, key).unwrap()["user"], value);
+        }
+        std::fs::write(dir.join("cookies.sqlite"), b"keep cookies").unwrap();
+        let mut text = std::fs::read_to_string(dir.join("user.js")).unwrap();
+        text.push_str("user_pref(\"unrelated.example\", 42);\n");
+        std::fs::write(dir.join("user.js"), text).unwrap();
+        let mut reset = draft("Firefox protected");
+        reset.browser = "firefox".into();
+        let changed = update(root.path(), &p.id, reset).unwrap();
+        assert_eq!(
+            crate::firefox::snapshot(&dir, "privacy.resistFingerprinting").unwrap()["user"],
+            true
+        );
+        apply_preferences(root.path(), &changed).unwrap();
+        assert_eq!(
+            crate::firefox::snapshot(&dir, "privacy.resistFingerprinting").unwrap()["user"],
+            false
+        );
+        assert_eq!(
+            crate::firefox::snapshot(&dir, "permissions.default.geo").unwrap()["user"],
+            0
+        );
+        assert_eq!(
+            crate::firefox::snapshot(&dir, "permissions.default.image").unwrap()["user"],
+            1
+        );
+        assert!(std::fs::read_to_string(dir.join("user.js"))
+            .unwrap()
+            .contains("unrelated.example"));
+        assert_eq!(
+            std::fs::read(dir.join("cookies.sqlite")).unwrap(),
+            b"keep cookies"
+        );
+    }
+    #[test]
+    fn advanced_chromium_defaults_preserve_site_exceptions_and_reject_malformed_structure() {
+        let root = test_dir();
+        let p = create(root.path(), draft("Chrome permissions"), None).unwrap();
+        let file = path(root.path(), &p).unwrap().join("Default/Preferences");
+        let original = serde_json::json!({"profile":{"content_settings":{"exceptions":{"notifications":{"https://allowed.example,*":{"setting":1}}}}},"unrelated":42});
+        std::fs::write(&file, serde_json::to_vec(&original).unwrap()).unwrap();
+        let mut d = draft("Chrome permissions");
+        d.preferences.advanced.notifications = PermissionMode::Block;
+        d.preferences.advanced.block_images = true;
+        let changed = update(root.path(), &p.id, d).unwrap();
+        apply_preferences(root.path(), &changed).unwrap();
+        let data: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+        assert_eq!(
+            data["profile"]["default_content_setting_values"]["notifications"],
+            2
+        );
+        assert_eq!(
+            data["profile"]["default_content_setting_values"]["geolocation"],
+            3
+        );
+        assert_eq!(
+            data["profile"]["default_content_setting_values"]["images"],
+            2
+        );
+        assert_eq!(
+            data["profile"]["content_settings"],
+            original["profile"]["content_settings"]
+        );
+        assert_eq!(data["unrelated"], 42);
+        assert!(
+            existing_preferences(&base(root.path(), &p).unwrap(), "chrome").advanced
+                == changed.preferences.advanced
+        );
+        let invalid = br#"{"profile":{"default_content_setting_values":false}}"#;
+        std::fs::write(&file, invalid).unwrap();
+        assert!(apply_preferences(root.path(), &changed).is_err());
+        assert_eq!(std::fs::read(&file).unwrap(), invalid);
+        let mut unsupported = draft("invalid");
+        unsupported.preferences.advanced.resist_fingerprinting = true;
+        assert!(create(root.path(), unsupported, None).is_err());
+    }
+
+    #[test]
+    fn location_block_revokes_chromium_grants_without_changing_other_permissions() {
+        let root = test_dir();
+        let p = create(root.path(), draft("Location permissions"), None).unwrap();
+        let file = path(root.path(), &p).unwrap().join("Default/Preferences");
+        let original = serde_json::json!({"profile":{"content_settings":{"exceptions":{"geolocation":{"https://allowed.example,*":{"setting":1},"https://blocked.example,*":{"setting":2}},"notifications":{"https://allowed.example,*":{"setting":1}}}}}});
+        std::fs::write(&file, serde_json::to_vec(&original).unwrap()).unwrap();
+        let mut d = draft("Location permissions");
+        d.preferences.advanced.location = PermissionMode::Block;
+        let changed = update(root.path(), &p.id, d).unwrap();
+        apply_preferences(root.path(), &changed).unwrap();
+        let data: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(file).unwrap()).unwrap();
+        assert!(
+            data["profile"]["content_settings"]["exceptions"]["geolocation"]
+                .get("https://allowed.example,*")
+                .is_none()
+        );
+        assert_eq!(
+            data["profile"]["content_settings"]["exceptions"]["geolocation"]
+                ["https://blocked.example,*"]["setting"],
+            2
+        );
+        assert_eq!(
+            data["profile"]["content_settings"]["exceptions"]["notifications"],
+            original["profile"]["content_settings"]["exceptions"]["notifications"]
+        );
+    }
     fn test_dir() -> tempfile::TempDir {
         // macOS /var is a system symlink; fixtures use its real path while
         // production profile paths still reject symlinked ancestors.

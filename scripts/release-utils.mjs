@@ -17,25 +17,25 @@ export function releaseVersion(root=projectRoot,tag=process.env.RELEASE_TAG || '
 
 export function packageNames(version) {
   return [
-    `ClaudeDone_${version}_windows_x64_setup.exe`,
-    `ClaudeDone_${version}_windows_x64_portable.exe`,
-    `ClaudeDone_${version}_macos_arm64.dmg`,
-    `ClaudeDone_${version}_macos_x64.dmg`,
+    `NodeCloak_${version}_windows_x64_setup.exe`,
+    `NodeCloak_${version}_windows_x64_portable.exe`,
+    `NodeCloak_${version}_macos_arm64.dmg`,
+    `NodeCloak_${version}_macos_x64.dmg`,
   ];
 }
 
 export function updaterAssets(version) {
   return [
     `${packageNames(version)[0]}.sig`,
-    `ClaudeDone_${version}_macos_arm64_update.app.tar.gz`,
-    `ClaudeDone_${version}_macos_arm64_update.app.tar.gz.sig`,
-    `ClaudeDone_${version}_macos_x64_update.app.tar.gz`,
-    `ClaudeDone_${version}_macos_x64_update.app.tar.gz.sig`,
+    `NodeCloak_${version}_macos_arm64_update.app.tar.gz`,
+    `NodeCloak_${version}_macos_arm64_update.app.tar.gz.sig`,
+    `NodeCloak_${version}_macos_x64_update.app.tar.gz`,
+    `NodeCloak_${version}_macos_x64_update.app.tar.gz.sig`,
   ];
 }
 
 export function verifyReleaseAssets(directory,version) {
-  const expected=[...packageNames(version),...updaterAssets(version),`ClaudeDone_${version}_THIRD_PARTY_NOTICES.tar.gz`].sort();
+  const expected=[...packageNames(version),...updaterAssets(version),`NodeCloak_${version}_THIRD_PARTY_NOTICES.tar.gz`].sort();
   const files=fs.readdirSync(directory).filter(name=>!['SHA256SUMS.txt','latest.json'].includes(name)).sort();
   if(JSON.stringify(files)!==JSON.stringify(expected)) throw new Error('Release must contain all four platform packages, signed updater bundles and the notice archive, with no unexpected assets');
   for(const name of files) {
