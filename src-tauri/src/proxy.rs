@@ -171,8 +171,21 @@ async fn tunnel(up: &Upstream, host: &str, port: u16) -> Result<Socket, String> 
         if host.len() > 255 {
             return Err("目标域名过长".into());
         }
-        let mut request = vec![5, 1, 0, 3, host.len() as u8];
-        request.extend(host.as_bytes());
+        let mut request = vec![5, 1, 0];
+        match host.parse::<IpAddr>() {
+            Ok(IpAddr::V4(address)) => {
+                request.push(1);
+                request.extend(address.octets());
+            }
+            Ok(IpAddr::V6(address)) => {
+                request.push(4);
+                request.extend(address.octets());
+            }
+            Err(_) => {
+                request.extend([3, host.len() as u8]);
+                request.extend(host.as_bytes());
+            }
+        }
         request.extend(port.to_be_bytes());
         socket
             .write_all(&request)
@@ -455,6 +468,46 @@ pub async fn test(up: Upstream) -> Result<ProxyTest, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn socks_uses_binary_addresses_for_literal_ipv4_and_ipv6_targets() {
+        for host in ["127.0.0.1", "::1"] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let address = host.parse::<IpAddr>().unwrap();
+            let server = tokio::spawn(async move {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut greeting = [0; 3];
+                socket.read_exact(&mut greeting).await.unwrap();
+                assert_eq!(greeting, [5, 1, 0]);
+                socket.write_all(&[5, 0]).await.unwrap();
+                let mut prefix = [0; 4];
+                socket.read_exact(&mut prefix).await.unwrap();
+                let expected = match address {
+                    IpAddr::V4(a) => {
+                        assert_eq!(prefix, [5, 1, 0, 1]);
+                        a.octets().to_vec()
+                    }
+                    IpAddr::V6(a) => {
+                        assert_eq!(prefix, [5, 1, 0, 4]);
+                        a.octets().to_vec()
+                    }
+                };
+                let mut value = vec![0; expected.len()];
+                socket.read_exact(&mut value).await.unwrap();
+                assert_eq!(value, expected);
+                assert_eq!(socket.read_u16().await.unwrap(), 443);
+                socket
+                    .write_all(&[5, 0, 0, 1, 127, 0, 0, 1, 0, 1])
+                    .await
+                    .unwrap();
+            });
+            let mut upstream = up("socks5", port);
+            upstream.config.username.clear();
+            upstream.password.clear();
+            tunnel(&upstream, host, 443).await.unwrap();
+            server.await.unwrap();
+        }
+    }
     #[tokio::test]
     #[ignore = "Starts two real Chrome windows in temporary profiles; run explicitly for release QA"]
     async fn real_browser_profiles_keep_cookies_proxies_and_close_actions_separate() {

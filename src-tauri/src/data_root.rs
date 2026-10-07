@@ -8,6 +8,8 @@ pub struct DataRoot(pub PathBuf);
 
 fn has_environment_data(root: &Path) -> bool {
     root.join("history.json").is_file()
+        || root.join("profiles.json").is_file()
+        || root.join("profiles").is_dir()
         || ["browser-chrome", "browser-edge", "browser-firefox"]
             .iter()
             .any(|name| root.join(name).is_dir())
@@ -47,6 +49,20 @@ mod tests {
         let legacy = directory.path().join(LEGACY_IDENTIFIER);
         std::fs::create_dir_all(legacy.join("browser-edge")).unwrap();
         std::fs::create_dir_all(current.join("browser-chrome")).unwrap();
+        assert_eq!(resolve(current.clone()), current);
+    }
+    #[test]
+    fn profile_registry_prevents_reopening_legacy_data_after_default_profiles_are_deleted() {
+        let directory = tempfile::tempdir().unwrap();
+        let legacy = directory.path().join(LEGACY_IDENTIFIER);
+        std::fs::create_dir_all(legacy.join("browser-edge")).unwrap();
+        let current = directory.path().join("com.claudedone");
+        std::fs::create_dir_all(&current).unwrap();
+        std::fs::write(
+            current.join("profiles.json"),
+            "{\"schema\":1,\"profiles\":[]}",
+        )
+        .unwrap();
         assert_eq!(resolve(current.clone()), current);
     }
 }
