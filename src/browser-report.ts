@@ -4,6 +4,8 @@ export interface BrowserReport {
   schemaVersion: 1 | 2; capturedAt: string; timezone: string; offsetMinutes: number;
   languages: string[]; locale: string; fonts: string[]; platform: 'Windows' | 'macOS' | 'Linux' | 'Other';
   browser?: BrowserId;
+  profileId?:string;
+  exit?:{ip:string;country:string|null};
   webgl?: string | null;
   screen?: {width:number;height:number;pixelRatio:number};
   network?: {supported:boolean;effectiveType:string|null;downlink:number|null;rtt:number|null;saveData:boolean|null};
@@ -20,7 +22,9 @@ function extraFields(v: Record<string,unknown>): Partial<BrowserReport> {
   if(v.browser!==null && !['chrome','edge','firefox'].includes(v.browser as string)) throw new Error('报告浏览器标识无效');
   const s=object(v.screen), n=object(v.network), p=object(v.plugins), privacy=object(v.privacy);
   if(!optionalText(v.webgl,1024) || !bounded(s.width,0,100000,true) || !bounded(s.height,0,100000,true) || !bounded(s.pixelRatio,0.01,100) || typeof n.supported!=='boolean' || !optionalText(n.effectiveType,50) || !optionalNumber(n.downlink,1000000) || !optionalNumber(n.rtt,1000000) || !optionalBoolean(n.saveData) || !bounded(p.count,0,1000,true) || !optionalNumber(p.hardwareConcurrency,100000,true) || !optionalBoolean(p.pdfViewerEnabled) || !optionalText(privacy.dnt,32) || !optionalBoolean(privacy.gpc)) throw new Error('新增网页信号缺失或超出合理范围');
-  return {browser:v.browser===null?undefined:v.browser as BrowserId,webgl:v.webgl,screen:{width:s.width,height:s.height,pixelRatio:s.pixelRatio},network:{supported:n.supported,effectiveType:n.effectiveType,downlink:n.downlink,rtt:n.rtt,saveData:n.saveData},plugins:{count:p.count,hardwareConcurrency:p.hardwareConcurrency,pdfViewerEnabled:p.pdfViewerEnabled},privacy:{dnt:privacy.dnt,gpc:privacy.gpc}};
+  if(v.profileId!==undefined && (typeof v.profileId!=='string'||!/^(?:[a-f0-9]{32}|legacy-(?:chrome|edge|firefox))$/.test(v.profileId)))throw new Error('报告副本标识无效');
+  let exit:BrowserReport['exit'];if(v.exit!==undefined){const e=object(v.exit);if(typeof e.ip!=='string'||!/^[a-f0-9:.]{3,64}$/i.test(e.ip)||!(e.country===null||typeof e.country==='string'&&/^[A-Z]{2}$/.test(e.country)))throw new Error('报告出口信息格式无效');exit={ip:e.ip,country:e.country as string|null};}
+  return {exit,profileId:v.profileId as string|undefined,browser:v.browser===null?undefined:v.browser as BrowserId,webgl:v.webgl,screen:{width:s.width,height:s.height,pixelRatio:s.pixelRatio},network:{supported:n.supported,effectiveType:n.effectiveType,downlink:n.downlink,rtt:n.rtt,saveData:n.saveData},plugins:{count:p.count,hardwareConcurrency:p.hardwareConcurrency,pdfViewerEnabled:p.pdfViewerEnabled},privacy:{dnt:privacy.dnt,gpc:privacy.gpc}};
 }
 export function parseBrowserReport(text: string): BrowserReport {
   if (text.length > 16384) throw new Error('报告超出大小限制');
@@ -60,7 +64,8 @@ export function withBrowserReport(scan: Scan | null, report: BrowserReport | nul
     const dntOn=['1','yes'].includes(privacy.dnt || '');
     overrides.tracking=actual('tracking',(scan.browser === 'firefox' ? privacy.gpc === true : dntOn)?'healthy':'warning',`DNT: ${dntOn?'开启':privacy.dnt===null?'未提供':'未开启'} · GPC: ${privacy.gpc===null?'不支持 / 未提供':privacy.gpc?'开启':'未开启'}`,'DNT 仅表达偏好，不保证网站遵守。GPC 不可用与关闭不同；这里不测试 HTTP 请求头或 CLI 遥测。');
   }
-  return { ...scan, checks: scan.checks.map(c => overrides[c.id] || c) };
+  if(report.exit){overrides.route=actual('route','manual',`${report.exit.ip} · ${report.exit.country||'地区未知'}`,'此浏览器访问官网 Cloudflare 出口接口的实际值，不代表所有目的地址的出口相同。');}
+  return { ...scan, ...(report.exit?{ip:report.exit.ip,location:report.exit.country}:{}), checks: scan.checks.map(c => overrides[c.id] || c) };
 }
 
 

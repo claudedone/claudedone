@@ -34,7 +34,7 @@ pub struct Scan {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Change {
-    target: String,
+    pub(crate) target: String,
     pointer: String,
     before: Option<Value>,
     after: Option<Value>,
@@ -42,6 +42,8 @@ pub struct Change {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Record {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_id: Option<String>,
     pub id: String,
     pub item_id: String,
     pub browser: String,
@@ -59,8 +61,8 @@ pub struct Outcome {
 }
 #[derive(Serialize)]
 pub struct Readiness {
-    ready: bool,
-    message: String,
+    pub ready: bool,
+    pub message: String,
 }
 pub fn repair_readiness(root: &Path, browser: &str, ids: &[String]) -> Result<Readiness, String> {
     validate_browser(browser)?;
@@ -159,7 +161,7 @@ pub fn history(root: &Path) -> Result<Vec<Record>, String> {
     serde_json::from_value(read_json(&path)?)
         .map_err(|_| "修复记录损坏，请保留 history.json 并检查后重试。".into())
 }
-fn save_history(root: &Path, records: &[Record]) -> Result<(), String> {
+pub(crate) fn save_history(root: &Path, records: &[Record]) -> Result<(), String> {
     write_json(
         &root.join("history.json"),
         &serde_json::to_value(records).map_err(|e| e.to_string())?,
@@ -592,8 +594,13 @@ fn apply_changes(root: &Path, browser: &str, changes: &[Change], undo: bool) -> 
         let c = &changes[0];
         let current = Some(json!(platform::timezone()?));
         let matches_snapshot = |snapshot: &Option<Value>| {
-            current.as_ref().and_then(Value::as_str).zip(snapshot.as_ref().and_then(Value::as_str))
-                .is_some_and(|(current, expected)| platform::timezone_names_match(current, expected))
+            current
+                .as_ref()
+                .and_then(Value::as_str)
+                .zip(snapshot.as_ref().and_then(Value::as_str))
+                .is_some_and(|(current, expected)| {
+                    platform::timezone_names_match(current, expected)
+                })
         };
         if undo && !matches_snapshot(&c.after) && !matches_snapshot(&c.before) {
             return Err("系统时区已被其他程序修改。为保留你的新设置，本次未撤销。".into());
@@ -722,6 +729,7 @@ pub fn repair_with_font_consent(
             .map_err(|e| e.to_string())?
             .as_nanos();
         records.push(Record {
+            profile_id: None,
             id: format!("{stamp}-{id}"),
             item_id: id.clone(),
             browser: browser.into(),
@@ -741,10 +749,7 @@ pub fn repair_with_font_consent(
             }
         });
         records[index].status = if result.is_ok() { "applied" } else { "failed" }.into();
-        records[index].message = result
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(|e| e.clone());
+        records[index].message = result.as_ref().cloned().unwrap_or_else(|e| e.clone());
         save_history(root, &records)?;
         outcomes.push(Outcome {
             id: id.clone(),
@@ -831,6 +836,7 @@ pub fn remove_user_fonts(
         };
         records.push(Record {
             id: token.clone(),
+            profile_id: None,
             item_id: "fonts".into(),
             browser: browser.into(),
             created_at: chrono::Utc::now().to_rfc3339(),
@@ -941,6 +947,7 @@ mod tests {
             ),
         };
         let mut records = vec![Record {
+            profile_id: None,
             id: "ff-font-test".into(),
             item_id: "fonts".into(),
             browser: "firefox".into(),

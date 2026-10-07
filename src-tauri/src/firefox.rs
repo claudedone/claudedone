@@ -35,15 +35,35 @@ pub fn fields(id: &str) -> Result<Vec<(&'static str, Value)>, String> {
     })
 }
 fn allowed(key: &str) -> bool {
-    ["fonts", "language", "webrtc", "dns", "tracking", "startup"]
-        .iter()
-        .any(|id| fields(id).unwrap().iter().any(|(k, _)| *k == key))
+    [
+        "network.proxy.type",
+        "network.proxy.http",
+        "network.proxy.http_port",
+        "network.proxy.ssl",
+        "network.proxy.ssl_port",
+        "network.proxy.socks",
+        "network.proxy.socks_port",
+        "network.proxy.no_proxies_on",
+        "network.proxy.socks_remote_dns",
+        "network.proxy.failover_direct",
+    ]
+    .contains(&key)
+        || ["fonts", "language", "webrtc", "dns", "tracking", "startup"]
+            .iter()
+            .any(|id| fields(id).unwrap().iter().any(|(k, _)| *k == key))
 }
 
 pub fn prepare_startup(profile: &Path) -> Result<(), String> {
-    let changes = fields("startup")?.into_iter().map(|(key, value)| {
-        Ok((key.to_owned(), snapshot(profile, key)?, json!({"user":value,"runtime":value})))
-    }).collect::<Result<Vec<_>, String>>()?;
+    let changes = fields("startup")?
+        .into_iter()
+        .map(|(key, value)| {
+            Ok((
+                key.to_owned(),
+                snapshot(profile, key)?,
+                json!({"user":value,"runtime":value}),
+            ))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
     apply(profile, &changes, false)
 }
 fn document(path: &Path) -> Result<String, String> {
@@ -176,12 +196,25 @@ mod tests {
         prepare_startup(&p).unwrap();
         prepare_startup(&p).unwrap();
         let text = document(&p.join("user.js")).unwrap();
-        assert_eq!(value_in(&text, "browser.startup.homepage").unwrap(), Some(json!("about:blank")));
+        assert_eq!(
+            value_in(&text, "browser.startup.homepage").unwrap(),
+            Some(json!("about:blank"))
+        );
         assert_eq!(value_in(&text, "network.trr.mode").unwrap(), Some(json!(3)));
-        assert_eq!(value_in(&text, "font.system.whitelist").unwrap(), Some(json!("Arial")));
+        assert_eq!(
+            value_in(&text, "font.system.whitelist").unwrap(),
+            Some(json!("Arial"))
+        );
         assert!(!text.contains("firefoxchina.cn"));
-        assert_eq!(fs::read_to_string(p.join("cookies.sqlite")).unwrap(), "login data");
-        assert_eq!(text.matches("user_pref(\"browser.startup.homepage\",").count(), 1);
+        assert_eq!(
+            fs::read_to_string(p.join("cookies.sqlite")).unwrap(),
+            "login data"
+        );
+        assert_eq!(
+            text.matches("user_pref(\"browser.startup.homepage\",")
+                .count(),
+            1
+        );
     }
     #[test]
     fn restores_runtime_and_startup_values_without_erasing_unrelated_changes() {

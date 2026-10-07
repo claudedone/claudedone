@@ -26,6 +26,12 @@ describe('actual browser report', () => {
     expect(offsetLabel(-480)).toBe('UTC+8'); expect(offsetLabel(-330)).toBe('UTC+5:30'); expect(offsetLabel(210)).toBe('UTC-3:30'); expect(offsetLabel(0)).toBe('UTC+0');
   });
   const extended = () => ({...report(),schemaVersion:2,browser:'edge',webgl:'ANGLE (NVIDIA, Direct3D11)',screen:{width:2560,height:1440,pixelRatio:1.5},network:{supported:true,effectiveType:'4g',downlink:10,rtt:50,saveData:false},plugins:{count:5,hardwareConcurrency:32,pdfViewerEnabled:true},privacy:{dnt:'1',gpc:null}});
+  it('validates profile ownership markers and actual browser exit values',()=>{
+    const id='a'.repeat(32);const r=parseBrowserReport(JSON.stringify({...extended(),profileId:id,exit:{ip:'203.0.113.5',country:'SG'}}));
+    expect(r.profileId).toBe(id);expect(r.exit?.ip).toBe('203.0.113.5');
+    for(const extra of [{profileId:'../../path'},{exit:{ip:'<script>',country:'SG'}},{exit:{ip:'203.0.113.1',country:'unknown'}}])expect(()=>parseBrowserReport(JSON.stringify({...extended(),...extra}))).toThrow();
+    const scan={browser:'edge',checks:[{id:'route'}]} as Scan;expect(withBrowserReport(scan,r)?.ip).toBe('203.0.113.5');
+  });
   it('distinguishes unsupported GPC from disabled and does not label hardware a fault', () => {
     const scan={browser:'edge',browserAvailable:true,checks:['webgl','screen','networkInfo','plugins','tracking'].map(id=>({id,status:'unknown'}))} as Scan;
     const result=withBrowserReport(scan,parseBrowserReport(JSON.stringify(extended())))!;

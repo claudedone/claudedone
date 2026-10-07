@@ -5,6 +5,9 @@ export type {UpdateCheck,UpdateProgress} from './app-updater';
 import { timezoneOffsetLabel, type TimezoneOption, type BrowserId, type CheckId, type Scan, type RepairRecord, type Outcome, type TimezoneTarget } from './domain';
 
 export const native = isTauri();
+let activeProfileId:string|null=null;
+export function setActiveProfile(id:string|null){activeProfileId=id;}
+export function getActiveProfile(){return activeProfileId;}
 export async function checkForUpdates(): Promise<UpdateCheck> {
   if (native) return {...await checkNativeUpdate(),portable:await invoke<boolean>('is_portable_build')};
   await new Promise(resolve => setTimeout(resolve, 700));
@@ -69,26 +72,27 @@ const initial = (browser: BrowserId): Scan => ({
     { id: 'emoji', status: 'manual', value: '需要在浏览器中检测', detail: '请进入 Claude Done 官网的环境检测页，查看当前浏览器的平台风格。', fixable: false },
   ],
 });
-const demos = { chrome: initial('chrome'), edge: initial('edge'), firefox: initial('firefox') };
+function demoFor(browser:BrowserId):Scan {const key=activeProfileId??browser;if(!demos[key]){demos[key]=initial(browser);if(browser==='firefox'){const fonts=demos[key].checks.find(c=>c.id==='fonts')!;fonts.fixable=true;fonts.value='按需限制字体 · 保留电脑字体';}}return demos[key];}
+const demos:Record<string,Scan> = { chrome: initial('chrome'), edge: initial('edge'), firefox: initial('firefox') };
 Object.assign(demos.firefox.checks.find(c => c.id === 'fonts')!, {value:'按需限制字体 · 保留电脑字体', detail:'仅限制专用 Firefox 可用的系统字体，部分中文显示可能变化，电脑字体保留。', fixable:true});
 Object.assign(demos.firefox.checks.find(c => c.id === 'webrtc')!, {detail:'关闭此专用 Firefox 的 WebRTC，网页音视频通话可能不可用。'});
 Object.assign(demos.firefox.checks.find(c => c.id === 'tracking')!, {value:'GPC 尚未配置 · 待网页复检'});
 let demoHistory: RepairRecord[] = [];
 
 export async function scanEnvironment(browser: BrowserId): Promise<Scan> {
-  if (native) return invoke('scan_environment', { browser });
+  if (native) return invoke('scan_environment', { browser,profileId:activeProfileId });
   await wait();
-  demos[browser].checkedAt = new Date().toISOString();
-  const result = structuredClone(demos[browser]);
+  demoFor(browser).checkedAt = new Date().toISOString();
+  const result = structuredClone(demoFor(browser));
   if (import.meta.env.DEV && browser === 'firefox' && new URLSearchParams(location.search).get('browserPreview') === 'missing') result.browserAvailable = false;
   return result;
 }
 export async function getHistory(): Promise<RepairRecord[]> {
-  if (native) return invoke('get_history');
-  return structuredClone(demoHistory);
+  if (native) return invoke('get_history',{profileId:activeProfileId});
+  return structuredClone(demoHistory.filter(r=>!activeProfileId||r.profileId===activeProfileId));
 }
 export async function checkRepairReadiness(browser: BrowserId, ids: CheckId[]): Promise<{ ready: boolean; message: string }> {
-  if (native) return invoke('check_repair_readiness', { browser, ids });
+  if (native) return invoke('check_repair_readiness', { browser, ids,profileId:activeProfileId });
   const blocked = import.meta.env.DEV && new URLSearchParams(location.search).get('repairPreview') === 'blocked';
   return { ready: !blocked || !ids.some(id => ['webrtc', 'dns', 'language', 'tracking', 'timezone', 'fonts'].includes(id)), message: '专用浏览器仍在运行。请保存未完成的输入，从该专用窗口的浏览器菜单选择“退出”，再回来继续。' };
 }
@@ -111,7 +115,7 @@ export async function getTimezoneCatalog(): Promise<TimezoneOption[]> {
   ];
 }
 export async function repairEnvironment(browser: BrowserId, ids: CheckId[], consentTimezone: boolean, timezoneTarget: TimezoneTarget = 'singapore', consentFonts = false, customTimezone = ''): Promise<Outcome[]> {
-  if (native) return invoke('repair_environment', { browser, ids, consentTimezone, timezoneTarget: timezoneTarget === 'custom' ? `custom:${customTimezone}` : timezoneTarget, consentFonts });
+  if (native) return invoke('repair_environment', { browser, ids,profileId:activeProfileId, consentTimezone, timezoneTarget: timezoneTarget === 'custom' ? `custom:${customTimezone}` : timezoneTarget, consentFonts });
   if (ids.includes('fonts') && (browser !== 'firefox' || !consentFonts)) throw new Error('专用 Firefox 字体限制需要明确勾选确认');
   if (ids.includes('timezone') && !consentTimezone) throw new Error('修改系统时区需要明确勾选确认');
   const zone = timezoneTarget === 'custom' ? (await getTimezoneCatalog()).find(zone => zone.id === customTimezone) : null;
@@ -120,9 +124,9 @@ export async function repairEnvironment(browser: BrowserId, ids: CheckId[], cons
   await wait();
   return ids.map(id => {
     if (import.meta.env.DEV && new URLSearchParams(location.search).get('repairPreview') === 'partial' && id !== 'cli') return { id, success: false, message: id === 'timezone' ? '演示：已取消管理员授权，可重试或到系统设置调整。' : '演示：专用浏览器在检查后重新启动，设置未写入。请退出后重试。' };
-    const c = demos[browser].checks.find(c => c.id === id)!;
+    const c = demoFor(browser).checks.find(c => c.id === id)!;
     const previous = structuredClone(c);
-    const previousOffset = structuredClone(demos[browser].checks.find(c => c.id === 'offset')!);
+    const previousOffset = structuredClone(demoFor(browser).checks.find(c => c.id === 'offset')!);
     const after = { ...c, status: id === 'timezone' ? 'healthy' as const : 'configured' as const, value: ({ webrtc: '已限制非代理 UDP', dns: 'Cloudflare · 加密 DNS', language: 'en-US,en', tracking: 'DNT 已配置 · GPC 待网页复检', timezone: `${zone?.id ?? (timezoneTarget === 'utc' ? 'UTC' : 'Singapore Standard Time')} · ${timezoneOffsetLabel(offset)}`, cli: '专用启动器已准备' } as Partial<Record<CheckId, string>>)[id] || c.value };
     if (browser === 'firefox') {
       if(id === 'fonts') after.value = '字体允许列表已配置 · 待网页复检';
@@ -139,19 +143,19 @@ export async function repairEnvironment(browser: BrowserId, ids: CheckId[], cons
       for (const state of Object.values(demos)) Object.assign(state.checks.find(c => c.id === 'offset')!, afterOffset);
       changes.push({ target: 'demo', pointer: 'offset', before: previousOffset, after: afterOffset });
     }
-    demoHistory.push({ id: `${Date.now()}-${id}`, itemId: id, browser, createdAt: new Date().toISOString(), status: 'applied', message: '演示修复完成，未修改电脑设置', changes });
+    demoHistory.push({ id: `${Date.now()}-${id}`, itemId: id, browser,profileId:['timezone','cli'].includes(id)?undefined:activeProfileId??`legacy-${browser}`, createdAt: new Date().toISOString(), status: 'applied', message: '演示修复完成，未修改电脑设置', changes });
     return { id, success: true, message: '演示设置已更新' };
   });
 }
-export async function undoRepair(recordId: string): Promise<void> {
-  if (native) return invoke('undo_repair', { recordId });
+export async function undoRepair(recordId: string,profileId?:string): Promise<void> {
+  if (native) return invoke('undo_repair', { recordId,profileId:profileId??null });
   await wait();
   const index = demoHistory.findIndex(r => r.id === recordId);
   const r = demoHistory[index];
   if (!r || r.status === 'undone') throw new Error('记录不存在或已撤销');
   if(r.itemId==='fonts' && r.browser!=='firefox') { demoFonts.push(r.changes[0].before as FontItem);r.status='undone';r.message='演示字体已恢复';return; }
   if (demoHistory.slice(index + 1).some(newer => newer.status !== 'undone' && newer.itemId === r.itemId && (['timezone', 'cli'].includes(r.itemId) || newer.browser === r.browser))) throw new Error('请先撤销这个项目较新的记录');
-  Object.assign(demos[r.browser].checks.find(c => c.id === r.itemId)!, r.changes[0].before);
+  const original=demos[r.profileId??r.browser]??demos[r.browser];Object.assign(original.checks.find(c => c.id === r.itemId)!, r.changes[0].before);
   if (['timezone', 'cli'].includes(r.itemId)) {
     for (const state of Object.values(demos)) Object.assign(state.checks.find(c => c.id === r.itemId)!, r.changes[0].before);
   }
@@ -162,7 +166,7 @@ export async function undoRepair(recordId: string): Promise<void> {
   r.status = 'undone'; r.message = '演示设置已恢复';
 }
 export async function launchBrowser(browser: BrowserId, destination: 'claude' | 'verify' | 'dns' | 'diagnostics' | 'privacyDocs') {
-  if (native) return invoke<void>('launch_browser', { browser, destination });
+  if (native) return invoke<void>('launch_browser', { browser, destination,profileId:activeProfileId });
   throw new Error('专用浏览器需要桌面版才能打开。当前为界面演示，未更改电脑。');
 }
 export async function launchCli() {

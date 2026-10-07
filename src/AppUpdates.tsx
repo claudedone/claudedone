@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, CircleAlert, Download, LoaderCircle, RefreshCw, X } from 'lucide-react';
 import { checkForUpdates, installAvailableUpdate, restartAfterUpdate, native, type UpdateCheck, type UpdateProgress } from './bridge';
+import {listProfiles,prepareApplicationUpdate} from './browser-profiles';
 import { version } from '../package.json';
 
 const PREFERENCE = 'claudedone.auto-check-updates';
@@ -16,6 +17,9 @@ export default function AppUpdates({ expanded, busy=false, onBusyChange }: { exp
   const [dismissed, setDismissed] = useState('');
   const [progress, setProgress] = useState<UpdateProgress | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [updateConfirmation,setUpdateConfirmation]=useState(false);
+  const confirmDialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{if(updateConfirmation)confirmDialog.current?.showModal();else confirmDialog.current?.close();},[updateConfirmation]);
   const installing = useRef(false);
   const inFlight = useRef(false);
   const initialCheck = useRef(false);
@@ -51,11 +55,13 @@ export default function AppUpdates({ expanded, busy=false, onBusyChange }: { exp
     try { localStorage.setItem(PREFERENCE, value ? 'on' : 'off'); } catch { /* Still applies to this session. */ }
     if (value) void check();
   }
-  async function install() {
+  async function install(confirmed=false) {
     if(installing.current || busy || checking) return;
-    installing.current=true; setUpdating(true); setError(''); onBusyChange?.(true);
+    if(!confirmed){try{if((await listProfiles()).some(p=>p.running)){setUpdateConfirmation(true);return;}}catch(e){setError(String(e));return;}}
+    setUpdateConfirmation(false);installing.current=true; setUpdating(true); setError(''); onBusyChange?.(true);
     let installed=false;
     try {
+      await prepareApplicationUpdate();
       await installAvailableUpdate(next=>{if(mounted.current) setProgress(next);});
       installed=true;
       if(native) await restartAfterUpdate();
@@ -95,5 +101,6 @@ export default function AppUpdates({ expanded, busy=false, onBusyChange }: { exp
     {progress && <div className="update-progress" role="status" aria-live="polite"><p>{progressText}</p>{progress.phase==='downloading' && <progress max={100} value={percent ?? undefined} aria-label="更新下载进度" />}</div>}
     {error && <p className="update-open-error" role="alert">{error}</p>}
     {expanded && <div className="update-controls"><p>点击“立即更新”后，自动下载、校验、安装并重启应用。配置和修复记录保留。</p><button className="button secondary" disabled={checking || busy || updating} onClick={() => void check()}><RefreshCw size={14} className={checking ? 'spin' : ''} />{checking ? '正在检查' : '检查更新'}</button></div>}
+    <dialog ref={confirmDialog} className="app-dialog" onCancel={()=>setUpdateConfirmation(false)}><h2>关闭副本并更新？</h2><p className="modal-subtitle">更新需要重启应用，本地代理也会暂停。请保存浏览器中未完成的输入。</p><p>确认后关闭所有运行中的专用副本，再下载、校验并安装更新。副本数据和配置保留。</p><div className="modal-actions"><button className="button secondary" onClick={()=>setUpdateConfirmation(false)}>暂不更新</button><button className="button primary" onClick={()=>void install(true)}>关闭副本并更新</button></div></dialog>
   </section>;
 }

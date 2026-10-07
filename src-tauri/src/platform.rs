@@ -122,7 +122,11 @@ pub fn timezone() -> Result<String, String> {
     }
     #[cfg(target_os = "macos")]
     {
-        read_macos_timezone(Path::new("/etc/localtime"), 40, std::time::Duration::from_millis(50))
+        read_macos_timezone(
+            Path::new("/etc/localtime"),
+            40,
+            std::time::Duration::from_millis(50),
+        )
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
@@ -131,21 +135,34 @@ pub fn timezone() -> Result<String, String> {
 }
 
 #[cfg(target_os = "macos")]
-fn read_macos_timezone(localtime: &Path, attempts: u32, delay: std::time::Duration) -> Result<String, String> {
+fn read_macos_timezone(
+    localtime: &Path,
+    attempts: u32,
+    delay: std::time::Duration,
+) -> Result<String, String> {
     // systemsetup can return while timed is replacing the timezone symlink.
     // Wait for the real file; never treat a dangling link as verified settings.
     for attempt in 0..attempts.max(1) {
         match std::fs::canonicalize(localtime) {
             Ok(path) => {
-                return path.to_string_lossy().split_once("zoneinfo/")
+                return path
+                    .to_string_lossy()
+                    .split_once("zoneinfo/")
                     .map(|(_, zone)| zone.to_owned())
                     .filter(|zone| !zone.is_empty())
                     .ok_or_else(|| format!("无法识别系统时区路径：{}", path.display()));
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound && attempt + 1 < attempts => {
+            Err(error)
+                if error.kind() == std::io::ErrorKind::NotFound && attempt + 1 < attempts =>
+            {
                 std::thread::sleep(delay);
             }
-            Err(error) => return Err(format!("无法读取系统时区 {}：{error}。系统可能仍在更新时区文件，请稍后重新检测。", localtime.display())),
+            Err(error) => {
+                return Err(format!(
+                    "无法读取系统时区 {}：{error}。系统可能仍在更新时区文件，请稍后重新检测。",
+                    localtime.display()
+                ))
+            }
         }
     }
     unreachable!()
@@ -168,38 +185,64 @@ pub fn timezone_catalog() -> Result<Vec<TimezoneOption>, String> {
         "[Console]::OutputEncoding=[Text.UTF8Encoding]::new(); @(Get-TimeZone -ListAvailable | ForEach-Object { @{ id=$_.Id; label=$_.DisplayName; offsetMinutes=[int](-$_.GetUtcOffset([datetime]::UtcNow).TotalMinutes) } }) | ConvertTo-Json -Compress"])?;
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     let text = "[]".to_string();
-    let mut options: Vec<TimezoneOption> = serde_json::from_str(&text)
-        .map_err(|_| "无法解析系统支持的时区清单".to_string())?;
+    let mut options: Vec<TimezoneOption> =
+        serde_json::from_str(&text).map_err(|_| "无法解析系统支持的时区清单".to_string())?;
     options.retain(|option| valid_timezone_name(&option.id));
     options.sort_by(|a, b| a.id.cmp(&b.id));
-    if options.is_empty() { return Err("系统没有返回可用时区，请在系统设置中检查".into()); }
+    if options.is_empty() {
+        return Err("系统没有返回可用时区，请在系统设置中检查".into());
+    }
     Ok(options)
 }
 
 fn valid_timezone_name(zone: &str) -> bool {
-    !zone.is_empty() && zone.len() <= 128
-        && zone.chars().all(|c| c.is_ascii_alphanumeric() || " /_+-().".contains(c))
+    !zone.is_empty()
+        && zone.len() <= 128
+        && zone
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || " /_+-().".contains(c))
 }
 
-fn custom_timezone_from_catalog(zone: &str, options: &[TimezoneOption]) -> Result<TimezoneOption, String> {
-    if !valid_timezone_name(zone) { return Err("目标时区格式无效".into()); }
-    options.iter().find(|option| option.id == zone).cloned()
+fn custom_timezone_from_catalog(
+    zone: &str,
+    options: &[TimezoneOption],
+) -> Result<TimezoneOption, String> {
+    if !valid_timezone_name(zone) {
+        return Err("目标时区格式无效".into());
+    }
+    options
+        .iter()
+        .find(|option| option.id == zone)
+        .cloned()
         .ok_or_else(|| "目标时区不在系统支持的清单中，请搜索并选择有效时区".into())
 }
 
 fn resolve_timezone_target(target: &str) -> Result<TimezoneOption, String> {
     if let Some(zone) = target.strip_prefix("custom:") {
-        if !valid_timezone_name(zone) { return Err("目标时区格式无效".into()); }
+        if !valid_timezone_name(zone) {
+            return Err("目标时区格式无效".into());
+        }
         return custom_timezone_from_catalog(zone, &timezone_catalog()?);
     }
     let (id, offset_minutes) = match (target, cfg!(target_os = "windows")) {
         ("singapore", true) => ("Singapore Standard Time", -480),
         ("singapore", false) => ("Asia/Singapore", -480),
         ("utc", true) => ("UTC", 0),
-        ("utc", false) => (if cfg!(target_os = "macos") { "GMT" } else { "Etc/UTC" }, 0),
+        ("utc", false) => (
+            if cfg!(target_os = "macos") {
+                "GMT"
+            } else {
+                "Etc/UTC"
+            },
+            0,
+        ),
         _ => return Err("目标时区不在允许列表中".into()),
     };
-    Ok(TimezoneOption { id: id.into(), label: id.into(), offset_minutes })
+    Ok(TimezoneOption {
+        id: id.into(),
+        label: id.into(),
+        offset_minutes,
+    })
 }
 
 pub fn target_timezone(target: &str) -> Result<String, String> {
@@ -249,7 +292,11 @@ pub fn set_timezone(zone: &str) -> Result<(), String> {
     // systemsetup uses Foundation timezone names, which omit Etc/UTC.
     // Accept old journal snapshots but send the native zero-offset name.
     #[cfg(target_os = "macos")]
-    let zone = if is_macos_utc_alias(zone) { "GMT" } else { zone };
+    let zone = if is_macos_utc_alias(zone) {
+        "GMT"
+    } else {
+        zone
+    };
     #[cfg(target_os = "windows")]
     {
         let direct = command("tzutil.exe")
@@ -302,7 +349,11 @@ fn verify_timezone_values(target: &str, current: &str, offset: i32) -> Result<()
     verify_timezone_option(&resolved, current, offset)
 }
 
-fn verify_timezone_option(resolved: &TimezoneOption, current: &str, offset: i32) -> Result<(), String> {
+fn verify_timezone_option(
+    resolved: &TimezoneOption,
+    current: &str,
+    offset: i32,
+) -> Result<(), String> {
     let expected = &resolved.id;
     let expected_offset = resolved.offset_minutes;
     if !timezone_names_match(current, expected) || offset != expected_offset {
@@ -315,8 +366,11 @@ fn timezone_offset_label(offset: i32) -> String {
     let east = -offset;
     let sign = if east >= 0 { "+" } else { "-" };
     let minutes = east.abs() % 60;
-    if minutes == 0 { format!("UTC{sign}{}", east.abs() / 60) }
-    else { format!("UTC{sign}{}:{minutes:02}", east.abs() / 60) }
+    if minutes == 0 {
+        format!("UTC{sign}{}", east.abs() / 60)
+    } else {
+        format!("UTC{sign}{}:{minutes:02}", east.abs() / 60)
+    }
 }
 
 fn profile_argument_matches(line: &str, profile: &str) -> bool {
@@ -449,14 +503,19 @@ mod profile_tests {
     #[test]
     fn firefox_profile_is_created_and_checked_without_changing_existing_data() {
         let directory = tempfile::tempdir().unwrap();
-        let profile = directory.path().join("用户配置 with spaces/browser-firefox");
+        let profile = directory
+            .path()
+            .join("用户配置 with spaces/browser-firefox");
         let prepared = prepare_firefox_profile(&profile).unwrap();
         assert!(prepared.is_absolute());
         assert!(prepared.is_dir());
         std::fs::write(profile.join("prefs.js"), "keep existing preferences").unwrap();
         std::fs::write(profile.join("cookies.sqlite"), "keep login data").unwrap();
         prepare_firefox_profile(&profile).unwrap();
-        assert_eq!(std::fs::read_to_string(profile.join("cookies.sqlite")).unwrap(), "keep login data");
+        assert_eq!(
+            std::fs::read_to_string(profile.join("cookies.sqlite")).unwrap(),
+            "keep login data"
+        );
         assert_eq!(std::fs::read_dir(profile).unwrap().count(), 2);
         let blocked = directory.path().join("not-a-directory");
         std::fs::write(&blocked, "keep").unwrap();
@@ -476,7 +535,10 @@ mod profile_tests {
             std::thread::sleep(std::time::Duration::from_millis(40));
             std::fs::write(zone, b"test zone data").unwrap();
         });
-        assert_eq!(read_macos_timezone(&localtime, 40, std::time::Duration::from_millis(10)).unwrap(), "Asia/Singapore");
+        assert_eq!(
+            read_macos_timezone(&localtime, 40, std::time::Duration::from_millis(10)).unwrap(),
+            "Asia/Singapore"
+        );
         writer.join().unwrap();
     }
     #[cfg(target_os = "macos")]
@@ -485,7 +547,8 @@ mod profile_tests {
         let directory = tempfile::tempdir().unwrap();
         let localtime = directory.path().join("localtime");
         std::os::unix::fs::symlink(directory.path().join("zoneinfo/GMT"), &localtime).unwrap();
-        let error = read_macos_timezone(&localtime, 2, std::time::Duration::from_millis(1)).unwrap_err();
+        let error =
+            read_macos_timezone(&localtime, 2, std::time::Duration::from_millis(1)).unwrap_err();
         assert!(error.contains("无法读取系统时区"));
         assert!(error.contains(localtime.to_str().unwrap()));
     }
@@ -535,13 +598,23 @@ mod profile_tests {
     }
     #[test]
     fn custom_timezones_require_system_membership_and_correct_offsets() {
-        let options = vec![TimezoneOption { id: "Asia/Kolkata".into(), label: "Asia/Kolkata".into(), offset_minutes: -330 }];
+        let options = vec![TimezoneOption {
+            id: "Asia/Kolkata".into(),
+            label: "Asia/Kolkata".into(),
+            offset_minutes: -330,
+        }];
         let target = custom_timezone_from_catalog("Asia/Kolkata", &options).unwrap();
         assert!(verify_timezone_option(&target, "Asia/Kolkata", -330).is_ok());
         assert!(verify_timezone_option(&target, "Asia/Kolkata", -480).is_err());
         assert!(verify_timezone_option(&target, "GMT", -330).is_err());
         assert_eq!(timezone_offset_label(-330), "UTC+5:30");
-        for zone in ["Unknown/Zone", "Asia/Kolkata'; anything", "$(anything)", "", "GMT\n"] {
+        for zone in [
+            "Unknown/Zone",
+            "Asia/Kolkata'; anything",
+            "$(anything)",
+            "",
+            "GMT\n",
+        ] {
             assert!(custom_timezone_from_catalog(zone, &options).is_err());
         }
         assert!(valid_timezone_name("W. Europe Standard Time"));
@@ -590,12 +663,66 @@ mod profile_tests {
 }
 
 pub fn spawn_browser(browser: &str, profile: &Path, url: &str) -> Result<(), String> {
+    spawn_browser_with_proxy(browser, profile, url, "system", None)
+}
+pub fn spawn_browser_with_proxy(
+    browser: &str,
+    profile: &Path,
+    url: &str,
+    mode: &str,
+    relay: Option<u16>,
+) -> Result<(), String> {
     let exe = browser_path(browser)?;
     let mut cmd = command(exe.to_str().ok_or("浏览器路径格式无效")?);
     if browser == "firefox" {
         ensure_profile_closed(profile)?;
         let profile = prepare_firefox_profile(profile)?;
         crate::firefox::prepare_startup(&profile)?;
+        let kind = if relay.is_some() {
+            1
+        } else if mode == "direct" {
+            0
+        } else {
+            5
+        };
+        let mut values = vec![
+            ("network.proxy.type", serde_json::json!(kind)),
+            (
+                "network.proxy.http",
+                serde_json::json!(if relay.is_some() { "127.0.0.1" } else { "" }),
+            ),
+            (
+                "network.proxy.ssl",
+                serde_json::json!(if relay.is_some() { "127.0.0.1" } else { "" }),
+            ),
+            (
+                "network.proxy.http_port",
+                serde_json::json!(relay.unwrap_or(0)),
+            ),
+            (
+                "network.proxy.ssl_port",
+                serde_json::json!(relay.unwrap_or(0)),
+            ),
+            ("network.proxy.socks", serde_json::json!("")),
+            ("network.proxy.socks_port", serde_json::json!(0)),
+            ("network.proxy.no_proxies_on", serde_json::json!("")),
+            ("network.proxy.socks_remote_dns", serde_json::json!(true)),
+            ("network.proxy.failover_direct", serde_json::json!(false)),
+        ];
+        if relay.is_some() {
+            values.push(("media.peerconnection.enabled", serde_json::json!(false)));
+        }
+        let changes = values
+            .into_iter()
+            .map(|(key, value)| {
+                Ok((
+                    key.to_owned(),
+                    crate::firefox::snapshot(&profile, key)?,
+                    serde_json::json!({"user":value,"runtime":value}),
+                ))
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+        crate::firefox::apply(&profile, &changes, false)?;
         // Do not inherit another Firefox session's profile/restart selection.
         cmd.env_remove("XRE_PROFILE_PATH")
             .env_remove("XRE_PROFILE_LOCAL_PATH")
@@ -604,6 +731,12 @@ pub fn spawn_browser(browser: &str, profile: &Path, url: &str) -> Result<(), Str
             .arg(profile)
             .args(["--new-window", url]);
     } else {
+        if let Some(port) = relay {
+            cmd.arg(format!("--proxy-server=http://127.0.0.1:{port}"))
+                .args(["--proxy-bypass-list=<-loopback>", "--disable-quic"]);
+        } else if mode == "direct" {
+            cmd.arg("--no-proxy-server");
+        }
         cmd.arg(format!("--user-data-dir={}", profile.display()))
             .args([
                 "--profile-directory=Default",
@@ -620,11 +753,135 @@ pub fn spawn_browser(browser: &str, profile: &Path, url: &str) -> Result<(), Str
     Ok(())
 }
 
+pub type BrowserProcess = (u32, Vec<String>);
+pub fn browser_processes() -> Vec<BrowserProcess> {
+    let system = sysinfo::System::new_all();
+    system
+        .processes()
+        .values()
+        .filter(|p| {
+            let name = p.name().to_string_lossy().to_lowercase();
+            ["chrome", "edge", "firefox"]
+                .iter()
+                .any(|b| name.contains(b))
+        })
+        .map(|p| {
+            (
+                p.pid().as_u32(),
+                p.cmd()
+                    .iter()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .collect(),
+            )
+        })
+        .collect()
+}
+pub fn profile_ids_from(processes: &[BrowserProcess], profile: &Path) -> Vec<u32> {
+    let normalize = |s: &str| {
+        if cfg!(windows) {
+            s.replace('/', "\\").trim_end_matches('\\').to_lowercase()
+        } else {
+            s.trim_end_matches('/').to_owned()
+        }
+    };
+    let expected = normalize(&profile.to_string_lossy());
+    processes
+        .iter()
+        .filter(|(_, args)| {
+            !args.iter().any(|s| s.starts_with("--type="))
+                && args.iter().enumerate().any(|(i, arg)| {
+                    let path = arg
+                        .strip_prefix("--user-data-dir=")
+                        .or_else(|| arg.strip_prefix("--profile="))
+                        .or_else(|| {
+                            if ["--user-data-dir", "--profile", "-profile"].contains(&arg.as_str())
+                            {
+                                args.get(i + 1).map(String::as_str)
+                            } else {
+                                None
+                            }
+                        });
+                    path.is_some_and(|path| normalize(path) == expected)
+                })
+        })
+        .map(|(id, _)| *id)
+        .collect()
+}
+pub fn profile_process_ids(profile: &Path) -> Result<Vec<u32>, String> {
+    Ok(profile_ids_from(&browser_processes(), profile))
+}
+#[cfg(windows)]
+unsafe extern "system" fn profile_window(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    state: isize,
+) -> i32 {
+    use windows_sys::Win32::UI::WindowsAndMessaging::*;
+    let state = &*(state as *const (Vec<u32>, bool));
+    let mut pid = 0;
+    GetWindowThreadProcessId(hwnd, &mut pid);
+    if state.0.contains(&pid) && IsWindowVisible(hwnd) != 0 {
+        if state.1 {
+            PostMessageW(hwnd, WM_CLOSE, 0, 0);
+        } else {
+            ShowWindow(hwnd, SW_RESTORE);
+            SetForegroundWindow(hwnd);
+        }
+    }
+    1
+}
+pub fn focus_profile(profile: &Path) -> Result<(), String> {
+    let ids = profile_process_ids(profile)?;
+    if ids.is_empty() {
+        return Err("副本已经关闭，请重新启动".into());
+    }
+    #[cfg(windows)]
+    {
+        let state = (ids, false);
+        unsafe {
+            windows_sys::Win32::UI::WindowsAndMessaging::EnumWindows(
+                Some(profile_window),
+                &state as *const _ as isize,
+            );
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        output("/usr/bin/osascript",&["-e",&format!("tell application \"System Events\" to set frontmost of first process whose unix id is {} to true",ids[0])])?;
+    }
+    Ok(())
+}
+pub fn close_profile(profile: &Path) -> Result<(), String> {
+    let ids = profile_process_ids(profile)?;
+    #[cfg(windows)]
+    {
+        let state = (ids, true);
+        unsafe {
+            windows_sys::Win32::UI::WindowsAndMessaging::EnumWindows(
+                Some(profile_window),
+                &state as *const _ as isize,
+            );
+        }
+    }
+    #[cfg(target_os = "macos")]
+    for pid in ids {
+        output("/bin/kill", &["-TERM", &pid.to_string()])?;
+    }
+    for _ in 0..16 {
+        if profile_process_ids(profile)?.is_empty() {
+            return ensure_profile_closed(profile);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+    Err("浏览器仍在运行。请保存输入并处理浏览器的关闭提示，代理保持运行；完成后重试。".into())
+}
+
 fn prepare_firefox_profile(profile: &Path) -> Result<PathBuf, String> {
-    let failure = |error: std::io::Error| format!(
+    let failure = |error: std::io::Error| {
+        format!(
         "无法准备 Firefox 专用配置目录 {}：{error}。请检查此目录的访问权限和剩余空间，然后重试；无需删除日常 Firefox 配置。",
         profile.display()
-    );
+    )
+    };
     std::fs::create_dir_all(profile).map_err(failure)?;
     let path = std::fs::canonicalize(profile).map_err(failure)?;
     // Firefox needs to create locks and databases, not just read user.js.
@@ -634,7 +891,9 @@ fn prepare_firefox_profile(profile: &Path) -> Result<PathBuf, String> {
     // Windows canonicalize adds a verbatim path prefix some Firefox versions
     // do not accept. The original absolute path uses normal Win32 syntax.
     #[cfg(target_os = "windows")]
-    let path = if profile.is_absolute() { profile.to_path_buf() } else {
+    let path = if profile.is_absolute() {
+        profile.to_path_buf()
+    } else {
         std::env::current_dir().map_err(failure)?.join(profile)
     };
     Ok(path)

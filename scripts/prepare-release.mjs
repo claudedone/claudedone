@@ -18,7 +18,7 @@ for(const [platform,name] of Object.entries(names)) {
   if(!decoded.startsWith('untrusted comment:') || !decoded.includes('trusted comment:') || !decoded.includes(`\tversion:${version}`)) throw new Error(`Invalid or mismatched updater signature file: ${platform}`);
   platforms[platform]={url:`https://github.com/claudedone/claudedone/releases/download/v${version}/${name}`,signature};
 }
-const releaseNotes=['支持应用内下载更新，显示实时进度，签名校验通过后安装并自动重启。','更新失败可重试；下载和安装期间暂停环境修复，保留配置与修复记录。','Windows、macOS Apple Silicon 和 Intel 均提供签名更新包。'];
+const releaseNotes=['新增 Chrome、Edge、Firefox 多副本管理：独立登录、配置、修复记录和检测报告，支持复制配置、标签搜索、最近删除与恢复。','每个副本可选择直连、系统代理、HTTP / HTTPS / SOCKS5，并支持认证和代理链接识别；密码保存到系统凭据存储，自定义代理失败不回退直连。','支持并行启动、定位窗口、关闭和重启；可查看出口 IP、地区、延迟与连接结果，官网报告可按副本导入。','自动接入旧专用浏览器目录，保留登录数据。电脑级时区、字体和 Claude Code 独立管理；关闭主窗口继续后台运行，更新前关闭副本。'];
 const manifest={version,notes:releaseNotes.map(note=>`- ${note}`).join('\n'),pub_date:new Date().toISOString(),platforms};
 fs.writeFileSync(path.join(directory,'latest.json'),JSON.stringify(manifest,null,2)+'\n');
 files.push('latest.json');

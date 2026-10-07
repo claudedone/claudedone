@@ -22,7 +22,7 @@ export interface Scan {
 }
 export interface Change { target: string; pointer: string; before: unknown; after: unknown }
 export interface RepairRecord {
-  id: string; itemId: CheckId; browser: BrowserId; createdAt: string;
+  id: string; profileId?: string; itemId: CheckId; browser: BrowserId; createdAt: string;
   status: 'pending' | 'applied' | 'failed' | 'undone'; message: string; changes: Change[];
 }
 export interface Outcome { id: CheckId; success: boolean; message: string }

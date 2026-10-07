@@ -6,7 +6,9 @@ Windows 与 macOS 的 Claude 环境诊断和可撤销配置工具。基于 Tauri
 
 ## 功能
 
-- 为 Chrome / Edge / Firefox 建立独立浏览器配置，检查语言与隐私偏好。
+- 多副本管理：Chrome / Edge / Firefox 可创建多个独立目录，登录、配置、修复记录与报告按副本隔离。
+- 每个副本独立选择直连、系统代理、HTTP / HTTPS / SOCKS5；支持认证、代理链接识别、出口 IP / 地区 / 延迟测试。
+- 并行启动、定位窗口、关闭与重启；支持名称、标签、备注、搜索、复制配置、最近删除、恢复与彻底删除。
 - 独立 Firefox 字体可见性设置，保留电脑原有字体；未安装时提供官方下载和重新检测。
 - 分别检查系统时区名称和实际 UTC 偏移，支持系统认可的自定义时区。
 - Claude Code 检查与专用启动器。
@@ -40,7 +42,7 @@ CI 分别使用 Windows、Apple Silicon Mac 和 Intel Mac 构建。产物保存�
 
 ## 自动发布
 
-更新 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 中的版本，提交后创建并推送 `v版本号` 标签，例如 `git tag v0.5.9`、`git push origin v0.5.9`。标签必须与三处主版本设置一致。
+更新 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 中的版本，提交后创建并推送 `v版本号` 标签，例如 `git tag v0.6.0`、`git push origin v0.6.0`。标签必须与三处主版本设置一致。
 
 GitHub Actions 会测试和构建 Windows x64、Mac Apple Silicon 和 Intel；所有平台通过后自动发布 GitHub Release，包括 Windows 安装版、便携版、两种 DMG、三端第三方许可归档和 `SHA256SUMS.txt`。主分支、PR 和手动运行只生成构建产物，推送版本标签才发布。已经公开的 Release 不会被工作流覆盖；失败任务可通过 Actions 重新运行。
 
@@ -52,11 +54,13 @@ GitHub Actions 会测试和构建 Windows x64、Mac Apple Silicon 和 Intel；�
 
 首次提交从 0.5.8 桌面源码快照导出，不包含旧 Git 历史、官网源码、运维记录、历史安装包或本机工具链缓存。开源版本使用独立绿色图标，见 [图标说明](docs/branding.md)。官网和已发布的 0.5.8 安装包是独立发布，不由此次源码拆分重新打包。
 
+0.6.0 多副本操作、代理行为、迁移与维护说明见 [浏览器副本指南](docs/browser-profiles.md)。
+
 ## 配置与隐私
 
 应用数据位于 `%APPDATA%/com.claudedone`（Windows）或 `~/Library/Application Support/com.claudedone`（macOS）。旧 `com.claudeready.desktop` 数据目录兼容保留，源码中的旧内部名称不应直接删除。
 
-工具不读取 Claude 密钥、浏览器 cookies 或登录凭据，不上传修复备份。连接检查访问 Claude 和 Cloudflare，更新检查和下载访问 GitHub Releases；这些服务会看到普通网络请求和客户端 IP。专用浏览器需要用户自行登录。
+工具不读取 Claude 密钥、浏览器 cookies 或登录凭据，不上传修复备份。连接检查访问 Claude 和 Cloudflare，更新检查和下载访问 GitHub Releases；这些服务会看到普通网络请求和客户端 IP。专用浏览器需要用户自行登录。代理密码保存于 Windows 凭据管理器或 macOS 钥匙串，不写入副本 JSON、命令行或修复记录。关闭主窗口会隐藏到托盘并保持代理运行；退出应用、安装更新前先关闭专用副本。
 
 分支版本默认沿用官方更新频道；自行发行前应更改 `src-tauri/tauri.conf.json` 的更新端点、公钥及相关官网下载入口，并在独立仓库配置自己的签名私钥。
 
