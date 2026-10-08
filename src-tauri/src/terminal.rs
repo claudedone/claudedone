@@ -261,13 +261,21 @@ mod tests {
             "LC_ALL=en_US.UTF-8",
             "PROXY=http://fixture.invalid:8080",
             "KEY=fixture-value",
-            project.to_str().unwrap(),
         ] {
             assert!(
                 text.contains(expected),
                 "Missing {expected} in fixture output"
             );
         }
+        let actual_directory = text
+            .lines()
+            .find_map(|line| line.strip_prefix("DIR=\"").and_then(|value| value.strip_suffix('"')))
+            .expect("The CLI fixture must report its working directory");
+        // cmd.exe may expand an 8.3 temporary root (RUNNER~1) to its long spelling.
+        assert_eq!(
+            fs::canonicalize(actual_directory).unwrap(),
+            fs::canonicalize(&project).unwrap()
+        );
         assert!(!text.contains("Write-Error :"));
     }
     #[test]
