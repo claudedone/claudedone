@@ -389,6 +389,7 @@ details>summary { border-radius: 8px; padding: 8px; font-size: 13px; }
 }
 
 /* Window actions live in the app header, without a separate system title bar. */
+.signal-explainer + .browser-verification-bar, .code-banner + .notice { margin-top: 24px; }
 .topbar { position: sticky; top: 0; z-index: 6; gap: 12px; user-select: none; }
 .topbar-right { flex-wrap: nowrap; flex-shrink: 0; gap: 12px; }
 .breadcrumb { flex: 1; min-width: 0; align-self: stretch; }

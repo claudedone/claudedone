@@ -23,7 +23,7 @@ const releaseNotes=[
   '桌面控件按 NodeCloak VI 统一设计：按钮、输入框、开关、复选框、分段选择器、状态标签和弹窗支持深浅色主题。',
   'Chrome、Edge 和 Firefox 使用各自的 SVG 图标；滚动条缩小为 4px，仅在区域激活时显示，控件焦点通过边框变色提示。',
   'Windows 任务栏和系统托盘采用透明幽灵图标，跟随 Windows 任务栏主题自动切换深浅配色。',
-  '修复电脑环境页面区块间距、字体操作按钮间隔及较窄窗口的控件布局。',
+  '修复电脑环境、环境概览及 Claude Code 页面区块间距、字体操作按钮间隔及较窄窗口的控件布局。',
   '交流群统一为 https://t.me/nodecloak_official；源码、下载和签名自动更新统一使用 https://github.com/nodecloak/nodecloak。',
 ];
 const manifest={version,notes:releaseNotes.map(note=>`- ${note}`).join('\n'),pub_date:new Date().toISOString(),platforms};
