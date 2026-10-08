@@ -2,7 +2,7 @@
 
 NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配置。每个副本可以单独设置代理、语言、时区和定位，也可以从指定项目目录启动 Claude Code、Codex CLI（ChatGPT）和 Gemini CLI。
 
-[下载安装包](https://github.com/nodecloak/nodecloak/releases/latest) · [官网与环境检测](https://claudedone.com) · [Telegram 群](https://t.me/nodecloak_official)
+[下载安装包](https://github.com/nodecloak/nodecloak/releases/latest) · [官网与环境检测](https://nodecloak.com) · [Telegram 群](https://t.me/nodecloak_official)
 
 ## 下载与使用
 
