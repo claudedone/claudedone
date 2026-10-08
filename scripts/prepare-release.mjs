@@ -19,6 +19,7 @@ for(const [platform,name] of Object.entries(names)) {
   platforms[platform]={url:`https://github.com/nodecloak/nodecloak/releases/download/v${version}/${name}`,signature};
 }
 const releaseNotes=[
+  '去掉系统标题栏，窗口拖动、双击最大化及最小化、还原、关闭操作整合到应用顶部；关闭后仍收起到托盘。',
   '桌面控件按 NodeCloak VI 统一设计：按钮、输入框、开关、复选框、分段选择器、状态标签和弹窗支持深浅色主题。',
   'Chrome、Edge 和 Firefox 使用各自的 SVG 图标；滚动条缩小为 4px，仅在区域激活时显示，控件焦点通过边框变色提示。',
   'Windows 任务栏和系统托盘采用透明幽灵图标，跟随 Windows 任务栏主题自动切换深浅配色。',

@@ -387,3 +387,21 @@ details>summary { border-radius: 8px; padding: 8px; font-size: 13px; }
   :root .toggle-control input:focus-visible+.switch, :root .pending-toggle input:focus-visible+.switch,
   :root .repair-option input:focus-visible+.custom-checkbox { border-color: Highlight; }
 }
+
+/* Window actions live in the app header, without a separate system title bar. */
+.topbar { position: sticky; top: 0; z-index: 6; gap: 12px; user-select: none; }
+.topbar-right { flex-wrap: nowrap; flex-shrink: 0; gap: 12px; }
+.breadcrumb { flex: 1; min-width: 0; align-self: stretch; }
+.window-controls { display: flex; align-items: center; gap: 4px; padding-left: 12px; border-left: 1px solid var(--border); }
+.window-controls button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); flex-shrink: 0; }
+.window-controls button:hover:not(:disabled) { background: var(--control-bg); color: var(--text); }
+.window-controls .window-close:hover:not(:disabled) { background: var(--warning-bg); color: var(--warning-text); border-color: var(--warning-border); }
+@media (max-width: 1120px) {
+  .topbar-right { gap: 8px; }
+  .window-controls { padding-left: 8px; }
+  .topbar .demo-badge { display: none; }
+}
+@media (max-width: 1000px) {
+  .telegram-group { width: 40px; height: 40px; padding: 0; justify-content: center; }
+  .telegram-group span, .telegram-group>svg:last-child { display: none; }
+}

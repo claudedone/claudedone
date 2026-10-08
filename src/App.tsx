@@ -4,6 +4,7 @@ import { checkCount, defaultTimezoneTarget, definitions, labels, recommendedChec
 import { parseBrowserReport, withBrowserReport, type BrowserReport } from './browser-report';
 import AppUpdates from './AppUpdates';
 import ThemeControl from './ThemeControl';
+import WindowControls from './WindowControls';
 import BrowserProfiles from './BrowserProfiles';
 import BrowserIcon from './BrowserIcon';
 import {listProfiles,quitApplication,type BrowserProfile} from './browser-profiles';
@@ -177,14 +178,14 @@ export default function App() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <div className="brand"><Mark /><span><span className="brand-node">Node</span><b>Cloak</b><small>BROWSER WORKSPACE</small></span></div>
+      <div className="brand" data-tauri-drag-region="deep"><Mark /><span><span className="brand-node">Node</span><b>Cloak</b><small>BROWSER WORKSPACE</small></span></div>
       <span className="sidebar-label">工作空间</span>
       <nav aria-label="主导航">{nav.map(({ id, title, icon: Icon }) => <button key={id} className={`nav-item ${page === id ? 'active' : ''}`} disabled={!!busy} onClick={() => void navigate(id)}><Icon size={18} strokeWidth={1.7} /><span>{title}</span>{id === 'overview' && warnings.length > 0 && <span className="nav-count">{warnings.length}</span>}{id === 'history' && history.filter(r => r.status === 'applied').length > 0 && <span className="nav-history-dot" />}</button>)}</nav>
       <div className="sidebar-separator" /><button className={`nav-item ${page === 'settings' ? 'active' : ''}`} disabled={!!busy} onClick={() => setPage('settings')}><Settings2 size={18} strokeWidth={1.7} /><span>偏好设置</span></button>
       <div className="sidebar-bottom"><div className="help-card"><span className="help-icon"><BookOpen size={21} strokeWidth={1.5} /></span><strong>第一次使用？</strong><p>从检测开始，了解每一项<br />设置的作用。</p><button onClick={() => setModal({ kind: 'help' })}>查看使用指南<ArrowUpRight size={14} /></button></div><div className="sidebar-footer"><span className="local-dot" />本地运行<span>v{version}</span></div></div>
     </aside>
     <main>
-      <header className="topbar"><div className="breadcrumb">NodeCloak<ChevronRight size={12} /><span>{pageText[page][0]}</span></div><div className="topbar-right"><ThemeControl />{!native && <span className="demo-badge">交互演示 · 不修改电脑</span>}<button className="telegram-group" title="加入 Telegram 群" disabled={!!busy} onClick={() => void perform('正在打开 Telegram 群', openTelegramGroup)}><Send size={14} /><span>Telegram Group</span><ArrowUpRight size={13} /></button><span className="platform-label"><Monitor size={13} />{scan?.platform || '桌面环境'}</span><button className="icon-button" title="使用指南" aria-label="使用指南" onClick={() => setModal({ kind: 'help' })}><CircleHelp size={18} /></button></div></header>
+      <header className="topbar" data-tauri-drag-region="deep"><div className="breadcrumb">NodeCloak<ChevronRight size={12} /><span>{pageText[page][0]}</span></div><div className="topbar-right"><ThemeControl />{!native && <span className="demo-badge">交互演示 · 不修改电脑</span>}<button className="telegram-group" title="加入 Telegram 群" disabled={!!busy} onClick={() => void perform('正在打开 Telegram 群', openTelegramGroup)}><Send size={14} /><span>Telegram Group</span><ArrowUpRight size={13} /></button><span className="platform-label"><Monitor size={13} />{scan?.platform || '桌面环境'}</span><button className="icon-button" title="使用指南" aria-label="使用指南" onClick={() => setModal({ kind: 'help' })}><CircleHelp size={18} /></button><WindowControls onError={message => notify(message)} /></div></header>
       <div className="main-content">
         <div className="page-heading"><div><h1>{pageText[page][0]}</h1><p>{pageText[page][1]}</p></div><button className="button secondary" style={{visibility:page==='profiles'?'hidden':undefined}} disabled={!!busy} onClick={() => perform('正在重新检测', async () => { await refresh(); notify(native ? '检测已更新' : '演示检测已更新'); })}><RefreshCw size={15} className={busy?.includes('检测') ? 'spin' : ''} />{busy?.includes('检测') ? '正在检测' : '重新检测'}</button></div>
 

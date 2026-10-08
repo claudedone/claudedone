@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { native } from './bridge';
 type Preference = 'system' | 'light' | 'dark';
 export default function ThemeControl() {
@@ -12,7 +13,7 @@ export default function ThemeControl() {
       const theme = preference === 'system' ? media.matches ? 'dark' : 'light' : preference;
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
-      if (native) void import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow().setTheme(preference === 'system' ? null : preference)).catch(() => {});
+      if (native) void getCurrentWindow().setTheme(preference === 'system' ? null : preference).catch(() => {});
     };
     apply(); media.addEventListener('change', apply);
     try { localStorage.setItem('nodecloak.theme', preference); } catch {}

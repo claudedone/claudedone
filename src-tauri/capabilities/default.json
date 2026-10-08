@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Local main window only; OS operations use narrowly scoped Rust commands.",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-set-theme", "updater:allow-check", "updater:allow-download", "updater:allow-install", "process:allow-restart"]
+  "permissions": ["core:default", "core:window:allow-set-theme", "core:window:allow-minimize", "core:window:allow-toggle-maximize", "core:window:allow-internal-toggle-maximize", "core:window:allow-start-dragging", "core:window:allow-close", "updater:allow-check", "updater:allow-download", "updater:allow-install", "process:allow-restart"]
 }

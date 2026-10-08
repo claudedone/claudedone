@@ -14,6 +14,7 @@
       {
         "label": "main",
         "title": "NodeCloak · Browser workspace",
+        "decorations": false,
         "width": 1220,
         "height": 860,
         "minWidth": 900,
