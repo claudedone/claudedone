@@ -1,35 +1,126 @@
 # NodeCloak
 
-Windows 与 macOS 的 Claude 环境诊断和可撤销配置工具。基于 Tauri 2、React、TypeScript 和 Rust。
+NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配置。每个副本可以单独设置代理、语言、时区和定位，也可以从指定项目目录启动 Claude Code、Codex CLI（ChatGPT）和 Gemini CLI。
 
-[GitHub 下载](https://github.com/nodecloak/nodecloak/releases/latest) · [官网](https://claudedone.com) · [Telegram](https://t.me/nodecloak_official) · [MIT License](LICENSE)
+[下载安装包](https://github.com/nodecloak/nodecloak/releases/latest) · [官网与环境检测](https://claudedone.com) · [Telegram 群](https://t.me/nodecloak_official)
 
-## 功能
+## 下载与使用
 
-- 多副本管理：Chrome / Edge / Firefox 可创建多个独立目录，登录、配置、修复记录与报告按副本隔离。
-- 每个副本独立选择直连、系统代理、HTTP / HTTPS / SOCKS5；支持认证、代理链接识别、出口 IP / 地区 / 延迟测试。
-- 并行启动、定位窗口、关闭与重启；支持名称、标签、备注、搜索、复制配置、最近删除、恢复与彻底删除。
-- 独立 Firefox 字体可见性设置，保留电脑原有字体；未安装时提供官方下载和重新检测。
-- 分别检查系统时区名称和实际 UTC 偏移，支持系统认可的自定义时区。
-- 终端：支持 Claude Code、ChatGPT / Codex CLI、Gemini CLI 和普通终端，检测安装状态并从指定工作目录启动。
-- 客户端支持简体中文与 English，默认跟随系统语言，可在「偏好设置 → 界面语言」切换并保存；界面语言不修改副本语言或终端 locale。
-- 可选用户字体处理、修改前备份、处理后核验及按项恢复。
-- 本地浏览器报告导入，以及应用内签名自动更新。
+在 [GitHub Releases](https://github.com/nodecloak/nodecloak/releases/latest) 选择对应的安装包。文件名中的版本号随发布更新。
 
-系统时区和字体处理由用户选择并确认影响。配置写入成功不等于浏览器实际值已改变，应关闭旧专用窗口再复检。环境检测不是 Anthropic 官方账户风险结论，工具不保证账户结果。项目与 Anthropic 无隶属关系。
+| 平台 | 文件名后缀 | 用途 |
+| --- | --- | --- |
+| Windows x64 | `_windows_x64_setup.exe` | 安装到电脑，后续可在应用内更新 |
+| Windows x64 | `_windows_x64_portable.exe` | 直接运行；应用内更新时会安装安装版，原便携文件保留 |
+| macOS M 系列 | `_macos_arm64.dmg` | 打开 DMG，将应用拖入 Applications |
+| macOS Intel | `_macos_x64.dmg` | 打开 DMG，将应用拖入 Applications |
 
-## 开发
+当前 Windows 包未做 Authenticode 代码签名，macOS 包未做 Apple 公证。macOS 首次打开被拦截时，可在「系统设置 → 隐私与安全性」中查看并允许打开。
 
-需要 Node.js 24、Rust stable；Windows 需要 Visual Studio C++ Build Tools 和 WebView2，macOS 需要 Xcode Command Line Tools。
+使用浏览器副本：
+
+1. 先安装 Chrome、Edge 或 Firefox。NodeCloak 不内置浏览器；未找到 Firefox 时，应用会提供[官方下载入口](https://www.firefox.com/en-US/download/all/desktop-release/)。
+2. 在「浏览器副本」点击「新建副本」，填写名称，选择浏览器和代理。在高级设置中选择语言、时区、定位和网站权限。
+3. 测试代理后启动副本，在新窗口中登录需要使用的网站。副本有独立的配置目录，不复制日常浏览器的登录信息。
+4. 从该副本打开「本地复检」或官网检测页，查看网页实际读到的值。需要保存结果时，将报告导入对应副本。
+
+运行中修改代理或浏览器设置，会显示「待重启」。关闭该副本的全部窗口，再从 NodeCloak 启动，新设置才会应用。只改名称、标签或备注不需要重启。
+
+## 浏览器副本能设置什么
+
+「副本」指独立的浏览器配置目录，不是复制一套浏览器程序。各副本的登录信息、设置和修复记录分开保存。
+
+| 项目 | 当前支持 |
+| --- | --- |
+| 副本管理 | 名称、标签、备注、搜索、标签筛选、同时启动多个副本、定位窗口、关闭和重启 |
+| 代理 | 直连、系统代理、HTTP、HTTPS、SOCKS5；支持账号密码和代理链接填写 |
+| 语言 | 跟随出口 IP 匹配，或自定义语言列表 |
+| 时区 | 跟随出口 IP、自定义 IANA 时区或跟随电脑；独立时区包含 UTC 偏移和夏令时 |
+| 定位 | 询问、允许或禁用；位置可使用 IP 大致位置、自定义经纬度或浏览器默认 |
+| 网站设置 | 启动页面、WebRTC、DNS 隐私、DNT / GPC、通知、摄像头、麦克风和图片加载设置 |
+| Firefox 字体 | 限制该副本可见的系统字体，保留电脑上的中文字体 |
+| Firefox 其他设置 | 可选严格指纹保护、禁用 WebGL；严格指纹保护与独立区域设置互斥 |
+| 检测与修复 | 检查网络、语言、时区、字体等；按项或一键应用支持的设置，修改前备份 |
+| 修复记录 | 查看修改内容，按记录恢复 |
+| 删除 | 移至最近删除、恢复、彻底删除；彻底删除会清理该副本数据及代理凭据 |
+
+副本字体可见性和「电脑环境」中的卸载用户字体是两种操作。前者只影响 Firefox 副本；后者会影响使用这些字体的其他应用，需要单独确认并备份。系统时区也属于电脑级设置，会影响所有应用。
+
+复制副本只复制设置和代理，不复制 Cookie、缓存或登录信息。彻底删除的副本不能恢复。详细操作见[浏览器副本指南](docs/browser-profiles.md)。
+
+## 代理和检测结果怎么看
+
+- **直连**只关闭浏览器的 HTTP / SOCKS 代理。软路由、VPN、TUN 仍可能改变出口。VLESS 和服务器上的链式代理需要在原来的网络工具中配置。
+- **系统代理**由浏览器读取系统设置。PAC、浏览器策略和域名分流可能让浏览器与应用的检测请求走不同路径。
+- **自定义代理**通过该副本的本地转发端口连接指定上游。代理连接失败不会自动切换为直连；它不接管其他应用的流量。
+- **Cloudflare 检测出口**是访问检测服务时的出口，不能代表所有网站的出口。应用还会分别检查 `claude.ai`、`claude.com` 的页面与同域名 TCP 出口。
+- **HTTP 200**只说明收到页面。地区不可用页面也可能返回 200；应用会识别这些页面和验证挑战，但不会代替浏览器登录检查账号。
+- **TCP 检测与 HTTP/3**可能走不同的分流规则。浏览器仍提示地区不可用时，应在报错的副本里确认 Claude 的实际出口、IPv4 / IPv6 和连接协议。
+
+「设置已写入」表示配置已保存；网页实际值需要在重启后的副本中复检。网页检测分数是环境信号的加权结果，不能据此判断账号会不会被封，也不能证明 Claude Code 进程被标记。
+
+Chrome / Edge 使用真实的硬件指纹，没有提供任意 User Agent、Canvas / Audio 噪音或虚拟内存、核心数。使用独立语言、时区和定位时，浏览器通过原生自动化接口应用设置，网页可以读取自动化标记（`navigator.webdriver=true`）。Firefox 严格指纹保护也可能影响网页显示、Canvas 和媒体功能。
+
+## 终端
+
+侧边栏中文显示「终端」，英文显示「Terminal」。支持以下入口：
+
+| 工具 | 启动命令 |
+| --- | --- |
+| Claude Code | `claude` |
+| Codex CLI（ChatGPT / OpenAI） | `codex` |
+| Gemini CLI | `gemini` |
+| 普通终端 | Windows PowerShell / macOS Terminal（zsh） |
+
+先按工具卡片中的官方指南安装 CLI，再点击「重新检测」。工作目录填写已存在的完整路径，留空使用用户主目录。点击打开后，在终端中完成 CLI 自己的登录流程。
+
+NodeCloak 为该终端及其子进程设置：
+
+```text
+TZ=Asia/Singapore
+LANG=en_US.UTF-8
+LC_ALL=en_US.UTF-8
+```
+
+这些变量不修改电脑时区。已有代理环境变量、API 密钥和 CLI 认证配置保留；浏览器副本的独立代理不会自动应用到终端。NodeCloak 不负责安装 CLI、代登录或提供模型账号。
+
+## 界面、后台运行与更新
+
+- 界面支持简体中文和 English，默认跟随系统语言；在「偏好设置 → 界面语言」切换并保存。界面语言不改变副本语言或终端的语言变量。
+- 外观支持浅色、深色和跟随系统。
+- 关闭主窗口会收起到托盘，正在运行的副本和代理继续工作。真正退出使用「偏好设置 → 退出应用」或托盘「退出」。
+- 0.5.9 及后续版本在启动时和每 6 小时检查更新，也可手动检查。点击「立即更新」后下载、校验更新签名、安装并重启；配置和修复记录保留。
+- 更新前需保存浏览器中未完成的输入，并关闭专用副本。0.5.8 及更早版本需要手动下载升级一次。
+
+## 数据保存在哪里
+
+新安装使用以下目录：
+
+| 系统 | 应用数据目录 |
+| --- | --- |
+| Windows | `%APPDATA%\com.nodecloak` |
+| macOS | `~/Library/Application Support/com.nodecloak` |
+
+已有 `com.claudedone` 或 `com.claudeready.desktop` 数据时，升级会继续使用原目录，不移动已有副本和备份。
+
+代理密码保存在 Windows 凭据管理器或 macOS 钥匙串。副本清单记录代理地址、用户名和凭据引用，不保存密码。修复备份保存在本机，不上传。
+
+网络检测会请求 Claude 和 Cloudflare，按 IP 匹配区域会请求 IPWhois，更新检查和下载请求 GitHub。这些服务会收到检测或下载请求及出口 IP。
+
+## 开发与构建
+
+项目使用 Tauri 2、React、TypeScript 和 Rust。
+
+需要 Node.js 24、Rust stable。Windows 还需要 Visual Studio C++ Build Tools 和 WebView2；macOS 需要 Xcode Command Line Tools。
 
 ```sh
 npm ci
 npm run tauri dev
 ```
 
-只预览前端：`npm run dev`，访问 `http://127.0.0.1:1420`。该模式使用演示数据，不更改电脑配置。
+只预览界面可运行 `npm run dev`，打开终端输出的本地地址。浏览器预览使用演示数据，不能修改系统、启动真实副本或 CLI。
 
-## 测试与构建
+检查代码：
 
 ```sh
 npm test
@@ -37,34 +128,38 @@ npm run build
 cargo test --manifest-path src-tauri/Cargo.toml --locked
 ```
 
-本机打包：`node scripts/build-desktop.mjs`。Windows 生成 NSIS 安装包，Mac 生成应用与 DMG；普通本地构建关闭更新包签名，不需要维护者私钥。
+需要启动真实浏览器、访问外部区域服务或读写系统凭据的测试默认跳过，手动运行方法见[浏览器副本指南](docs/browser-profiles.md#验证)。
 
-CI 分别使用 Windows、Apple Silicon Mac 和 Intel Mac 构建。产物保存在 `src-tauri/target/release/bundle/`；推送版本标签时生成签名更新包并发布 GitHub Release，不自动部署官网。Windows 代码签名与 Apple 公证需要维护者单独配置，密钥不能提交到源码。
+本机打包：
 
-## 自动发布
+```sh
+node scripts/build-desktop.mjs
+```
 
-更新 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 中的版本，提交后创建并推送 `v版本号` 标签，例如 `git tag v1.0.0`、`git push origin v1.0.0`。标签必须与三处主版本设置一致。
+Windows 上生成 NSIS 安装包和可执行文件；macOS 上生成应用与 DMG。普通本地构建不生成签名更新包。DMG 使用 macOS 构建，GitHub Actions 分别使用 Windows、Apple Silicon Mac 和 Intel Mac。
 
-GitHub Actions 会测试和构建 Windows x64、Mac Apple Silicon 和 Intel；所有平台通过后自动发布 GitHub Release，包括 Windows 安装版、便携版、两种 DMG、三端第三方许可归档和 `SHA256SUMS.txt`。主分支、PR 和手动运行只生成构建产物，推送版本标签才发布。已经公开的 Release 不会被工作流覆盖；失败任务可通过 Actions 重新运行。
+## 维护者发布
 
-从 0.5.9 开始，启动时和每 6 小时通过 GitHub Release 的 `latest.json` 检查新版本；点击“立即更新”后应用下载更新包，签名校验通过才安装并重启。失败时可重试，用户配置与修复记录保留。0.5.8 及更早版本需手动升级一次。Windows 便携版更新也使用 NSIS 安装器，会安装并启动安装版，原便携文件不会自行更换；持续自动更新建议使用安装版。
+1. 同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 的版本，并更新 `scripts/prepare-release.mjs` 中的发布说明。
+2. 执行 `node scripts/check-release-version.mjs`、`node --test scripts/release-checks.mjs` 和上述代码检查。
+3. 提交代码，创建并推送与版本一致的 `v<版本>` 标签。三个平台全部构建成功后，GitHub Actions 才发布 Release；已公开的 Release 不会被覆盖。
 
-维护者需要在仓库 Actions Secrets 配置 `TAURI_SIGNING_PRIVATE_KEY`。公钥在 `src-tauri/tauri.conf.json`；私钥不能进入仓库，需单独备份。PR 和普通分支构建不读取签名私钥。发布还包含三端 `.sig`、Mac `app.tar.gz` 更新包和更新清单。Tauri 更新签名不等于 Windows Authenticode 签名或 Apple 公证。
+Release 包含 Windows 安装版、便携版、两种 macOS DMG、签名更新文件、`latest.json`、`SHA256SUMS.txt` 和第三方许可归档。主分支、PR 和手动运行只生成构建产物，不发布 Release；官网需单独同步和部署。
 
-下载 Release 所有附件到一个目录后，可用 `cargo run --manifest-path src-tauri/Cargo.toml --example verify-updates -- <目录>` 核验三端更新签名及篡改拒绝。
+签名私钥放在仓库 Actions Secret `TAURI_SIGNING_PRIVATE_KEY`，公钥配置在 `src-tauri/tauri.conf.json`。Tauri 更新签名用于校验更新文件，不是 Windows Authenticode 签名或 Apple 公证。
 
-首次提交从 0.5.8 桌面源码快照导出，不包含旧 Git 历史、官网源码、运维记录、历史安装包或本机工具链缓存。开源版本使用独立绿色图标，见 [图标说明](docs/branding.md)。官网和已发布的 0.5.8 安装包是独立发布，不由此次源码拆分重新打包。
+下载全部 Release 附件后，可以核验三端更新签名和篡改拒绝：
 
-0.6.0 多副本操作、代理行为、迁移与维护说明见 [浏览器副本指南](docs/browser-profiles.md)。
+```sh
+cargo run --manifest-path src-tauri/Cargo.toml --example verify-updates -- <附件目录>
+```
 
-## 配置与隐私
+自行发行时，需要更换更新端点、公钥和下载链接，并在自己的仓库设置签名私钥，否则构建仍会检查本项目的更新。
 
-新安装的数据位于 `%APPDATA%/com.nodecloak`（Windows）或 `~/Library/Application Support/com.nodecloak`（macOS）。升级优先复用已有 `com.claudedone`，再兼容 `com.claudeready.desktop`；原路径保持不变以保护含绝对路径的修复记录。旧代理凭据命名空间继续保留。
+## 许可与反馈
 
-工具不读取 Claude 密钥、浏览器 cookies 或登录凭据，不上传修复备份。连接检查访问 Claude 和 Cloudflare，更新检查和下载访问 GitHub Releases；这些服务会看到普通网络请求和客户端 IP。专用浏览器需要用户自行登录。代理密码保存于 Windows 凭据管理器或 macOS 钥匙串，不写入副本 JSON、命令行或修复记录。关闭主窗口会隐藏到托盘并保持代理运行；退出应用、安装更新前先关闭专用副本。
+原创源码与本仓库原创图标使用 [MIT License](LICENSE)。依赖许可见[第三方许可说明](THIRD_PARTY_NOTICES.md)，Chrome、Edge 和 Firefox 图标来源见[浏览器图标说明](public/browsers/README.md)。
 
-分支版本默认沿用官方更新频道；自行发行前应更改 `src-tauri/tauri.conf.json` 的更新端点、公钥及相关官网下载入口，并在独立仓库配置自己的签名私钥。
+问题反馈可使用 [GitHub Issues](https://github.com/nodecloak/nodecloak/issues) 或 [Telegram](https://t.me/nodecloak_official)。请说明系统、应用版本、浏览器类型和复现步骤。不要提交代理密码、API 密钥或浏览器登录数据。
 
-## 贡献与许可
-
-见 [贡献指南](CONTRIBUTING.md)、[安全反馈](SECURITY.md) 和 [第三方许可说明](THIRD_PARTY_NOTICES.md)。项目原创源码与本仓库图标使用 MIT；依赖保留各自许可。
+[贡献指南](CONTRIBUTING.md) · [安全反馈](SECURITY.md)
