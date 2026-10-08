@@ -460,19 +460,20 @@ async fn test_with_client(
             .map(str::to_owned)
     };
     let latency = started.elapsed().as_millis();
-    let target = match client.get("https://claude.ai").send().await {
-        Ok(response) => format!("claude.ai HTTP {}", response.status().as_u16()),
-        Err(_) => "出口检测成功；Claude 连接超时或失败".into(),
-    };
+    let (page, route) = tokio::join!(
+        crate::claude_probe::probe(&client, "https://claude.ai"),
+        crate::claude_probe::trace(&client, "https://claude.ai/cdn-cgi/trace")
+    );
+    let target = format!("claude.ai {} · {}", page.label, route.unwrap_or_else(|| "同域名出口未取得，需在副本内复检".into()));
     Ok(ProxyTest {
         ip: value("ip="),
         country: value("loc="),
         latency,
         checked_at: chrono::Utc::now().to_rfc3339(),
         connection: if mode == "system" {
-            "应用按系统 / 环境代理检测；PAC、分流和浏览器策略可能不同，请在副本内复检".into()
+            "列表 IP 来自通用 Cloudflare 检测，可能与 Claude 分流出口不同。此测试采用系统 / 环境代理，仅覆盖 TCP HTTPS；PAC 和 HTTP/3（QUIC）需在副本内复检".into()
         } else {
-            "通过副本指定代理路径检测；实际浏览器出口请在副本内复检".into()
+            "列表 IP 来自通用 Cloudflare 检测，可能与 Claude 分流出口不同。此测试采用副本指定路径，仅覆盖 TCP HTTPS；HTTP/3（QUIC）需在副本内复检".into()
         },
         target,
     })

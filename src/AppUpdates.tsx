@@ -1,3 +1,4 @@
+import {t,getDateLocale} from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Check, CircleAlert, Download, LoaderCircle, RefreshCw, X } from 'lucide-react';
 import { checkForUpdates, installAvailableUpdate, restartAfterUpdate, native, type UpdateCheck, type UpdateProgress } from './bridge';
@@ -85,22 +86,22 @@ export default function AppUpdates({ expanded, busy=false, onBusyChange }: { exp
   if (!expanded && !updateVisible && !updatingVisible) return null;
   const percent=progress?.total ? Math.min(100,Math.floor(progress.downloaded/progress.total*100)) : null;
   const progressText=progress?.phase==='ready' ? native ? '更新已安装，正在重启应用…' : '演示更新已完成，电脑没有改变。' : progress?.phase==='installing' ? '正在安装更新，请勿关闭应用…' : progress?.phase==='verifying' ? '下载完成，正在校验更新签名…' : `正在下载更新${percent!==null ? ` · ${percent}%` : ''}…`;
-  return <section className={expanded ? 'settings-card app-updates' : 'update-banner'} aria-label="应用更新">
+  return <section className={expanded ? 'settings-card app-updates' : 'update-banner'} aria-label={t("应用更新")}>
     {expanded && <>
-      <div className="update-heading"><div><h3>应用更新</h3><p>当前版本 {version}{!native && ' · 演示模式'}</p></div><span className="settings-tag neutral">稳定版</span></div>
-      <div className="settings-line"><div><strong>自动检查更新</strong><p>启动时和每 6 小时检查新版本，可直接在应用内更新。</p></div><label className="pending-toggle"><input type="checkbox" role="switch" checked={automatic} disabled={updating} onChange={event => toggleAutomatic(event.target.checked)} aria-label="自动检查更新" /><span className="switch" /></label></div>
+      <div className="update-heading"><div><h3>{t("应用更新")}</h3><p>{t("当前版本")}{t(version)}{t(!native && ' · 演示模式')}</p></div><span className="settings-tag neutral">{t("稳定版")}</span></div>
+      <div className="settings-line"><div><strong>{t("自动检查更新")}</strong><p>{t("启动时和每 6 小时检查新版本，可直接在应用内更新。")}</p></div><label className="pending-toggle"><input type="checkbox" role="switch" checked={automatic} disabled={updating} onChange={event => toggleAutomatic(event.target.checked)} aria-label={t("自动检查更新")} /><span className="switch" /></label></div>
       <div className="update-status" role="status" aria-live="polite">
-        {checking ? <><LoaderCircle size={16} className="spin" /><span>正在检查新版本…</span></> : error ? <><CircleAlert size={16} /><span>{error}</span></> : result ? <><Check size={16} /><span>{result.available ? `发现新版本 ${result.latestVersion}` : result.supported ? '当前已是最新版本' : '此平台暂无可下载的官方安装包'}</span></> : <span>尚未检查更新</span>}
+        {checking ? <><LoaderCircle size={16} className="spin" /><span>{t("正在检查新版本…")}</span></> : error ? <><CircleAlert size={16} /><span>{t(error)}</span></> : result ? <><Check size={16} /><span>{t(result.available ? `发现新版本 ${result.latestVersion}` : result.supported ? '当前已是最新版本' : '此平台暂无可下载的官方安装包')}</span></> : <span>{t("尚未检查更新")}</span>}
       </div>
-      {result && <p className="update-last-check">上次检查成功：{new Date(result.checkedAt).toLocaleString('zh-CN')}</p>}
+      {result && <p className="update-last-check">{t("上次检查成功：")}{t(new Date(result.checkedAt).toLocaleString(getDateLocale()))}</p>}
     </>}
     {(updateVisible || updatingVisible) && result && <div className="update-release" role="status">
-      <div><strong><Download size={16} />发现新版本 {result.latestVersion}{!native && '（演示）'}</strong><ul>{result.notes.map((note, index) => <li key={index}>{note}</li>)}</ul>{result.portable && <p className="update-open-error">当前为便携版，更新将通过安装器安装并启动新版；原便携文件保留。后续请使用安装版。</p>}</div>
-      <div className="update-release-actions">{progress?.phase==='ready' ? native && <button className="button primary" onClick={() => void restart()}><RefreshCw size={14} />重启应用</button> : <button className="button primary" disabled={busy || checking || updating} onClick={() => void install()}>{updating ? <LoaderCircle size={14} className="spin" /> : <Download size={14} />}{updating ? '正在更新' : error ? '重试更新' : result.portable ? '更新并安装' : '立即更新'}</button>}{!expanded && !updating && <button className="icon-button" aria-label="暂时关闭更新提示" onClick={() => {setDismissed(result.latestVersion);setProgress(null);}}><X size={16} /></button>}</div>
+      <div><strong><Download size={16} />{t("发现新版本")}{t(result.latestVersion)}{t(!native && '（演示）')}</strong><ul>{result.notes.map((note, index) => <li key={index}>{t(note)}</li>)}</ul>{result.portable && <p className="update-open-error">{t("当前为便携版，更新将通过安装器安装并启动新版；原便携文件保留。后续请使用安装版。")}</p>}</div>
+      <div className="update-release-actions">{progress?.phase==='ready' ? native && <button className="button primary" onClick={() => void restart()}><RefreshCw size={14} />{t("重启应用")}</button> : <button className="button primary" disabled={busy || checking || updating} onClick={() => void install()}>{updating ? <LoaderCircle size={14} className="spin" /> : <Download size={14} />}{t(updating ? '正在更新' : error ? '重试更新' : result.portable ? '更新并安装' : '立即更新')}</button>}{!expanded && !updating && <button className="icon-button" aria-label={t("暂时关闭更新提示")} onClick={() => {setDismissed(result.latestVersion);setProgress(null);}}><X size={16} /></button>}</div>
     </div>}
-    {progress && <div className="update-progress" role="status" aria-live="polite"><p>{progressText}</p>{progress.phase==='downloading' && <progress max={100} value={percent ?? undefined} aria-label="更新下载进度" />}</div>}
-    {error && <p className="update-open-error" role="alert">{error}</p>}
-    {expanded && <div className="update-controls"><p>点击“立即更新”后，自动下载、校验、安装并重启应用。配置和修复记录保留。</p><button className="button secondary" disabled={checking || busy || updating} onClick={() => void check()}><RefreshCw size={14} className={checking ? 'spin' : ''} />{checking ? '正在检查' : '检查更新'}</button></div>}
-    <dialog ref={confirmDialog} className="app-dialog" onCancel={()=>setUpdateConfirmation(false)}><h2>关闭副本并更新？</h2><p className="modal-subtitle">更新需要重启应用，本地代理也会暂停。请保存浏览器中未完成的输入。</p><p>确认后关闭所有运行中的专用副本，再下载、校验并安装更新。副本数据和配置保留。</p><div className="modal-actions"><button className="button secondary" onClick={()=>setUpdateConfirmation(false)}>暂不更新</button><button className="button primary" onClick={()=>void install(true)}>关闭副本并更新</button></div></dialog>
+    {progress && <div className="update-progress" role="status" aria-live="polite"><p>{t(progressText)}</p>{progress.phase==='downloading' && <progress max={100} value={percent ?? undefined} aria-label={t("更新下载进度")} />}</div>}
+    {t(error && <p className="update-open-error" role="alert">{t(error)}</p>)}
+    {expanded && <div className="update-controls"><p>{t("点击“立即更新”后，自动下载、校验、安装并重启应用。配置和修复记录保留。")}</p><button className="button secondary" disabled={checking || busy || updating} onClick={() => void check()}><RefreshCw size={14} className={checking ? 'spin' : ''} />{t(checking ? '正在检查' : '检查更新')}</button></div>}
+    <dialog ref={confirmDialog} className="app-dialog" onCancel={()=>setUpdateConfirmation(false)}><h2>{t("关闭副本并更新？")}</h2><p className="modal-subtitle">{t("更新需要重启应用，本地代理也会暂停。请保存浏览器中未完成的输入。")}</p><p>{t("确认后关闭所有运行中的专用副本，再下载、校验并安装更新。副本数据和配置保留。")}</p><div className="modal-actions"><button className="button secondary" onClick={()=>setUpdateConfirmation(false)}>{t("暂不更新")}</button><button className="button primary" onClick={()=>void install(true)}>{t("关闭副本并更新")}</button></div></dialog>
   </section>;
 }

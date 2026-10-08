@@ -474,7 +474,7 @@ pub fn open_firefox_download() -> Result<(), String> {
     open_external("https://www.firefox.com/en-US/download/all/desktop-release/")
 }
 
-fn open_external(url: &str) -> Result<(), String> {
+pub(crate) fn open_external(url: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     let mut opener = {
         let mut cmd = command("rundll32.exe");

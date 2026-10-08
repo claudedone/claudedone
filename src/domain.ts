@@ -1,3 +1,4 @@
+import {getDateLocale} from './i18n';
 export type BrowserId = 'chrome' | 'edge' | 'firefox';
 export type CheckId = 'connection' | 'route' | 'webrtc' | 'dns' | 'language' | 'timezone' | 'offset' | 'locale' | 'cli' | 'fonts' | 'emoji' | 'webgl' | 'screen' | 'networkInfo' | 'plugins' | 'tracking';
 export type TimezoneTarget = 'singapore' | 'utc' | 'custom';
@@ -57,5 +58,5 @@ export function repairIds(ids: CheckId[]): CheckId[] {
   return [...new Set(ids.map(id => id === 'offset' ? 'timezone' as const : id))];
 }
 export function timeLabel(value: string) {
-  return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+  return new Intl.DateTimeFormat(getDateLocale(), { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }

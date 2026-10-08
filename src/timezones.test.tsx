@@ -1,4 +1,6 @@
-import { expect, it } from 'vitest';
+import { beforeEach, expect, it } from 'vitest';
+import {setLanguage} from './i18n';
+beforeEach(()=>setLanguage('zh'));
 import { renderToStaticMarkup } from 'react-dom/server';
 import TimezonePicker from './TimezonePicker';
 import { timezoneOffsetLabel } from './domain';

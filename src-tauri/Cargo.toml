@@ -1,6 +1,6 @@
 [package]
 name = "nodecloak"
-version = "0.7.1"
+version = "1.0.0"
 description = "Independent browser workspaces and environment diagnostics"
 authors = ["NodeCloak contributors"]
 edition = "2021"

@@ -330,23 +330,20 @@ pub async fn scan_network(mut scan: Scan) -> Scan {
         Err(_) => return scan,
     };
     let start = std::time::Instant::now();
-    // Both domains are measured independently; 403 is not a successful connectivity verdict.
-    let a = client.head("https://claude.ai").send().await;
-    let b = client.head("https://claude.com").send().await;
-    let ok = a.as_ref().is_ok_and(|r| r.status().is_success())
-        && b.as_ref().is_ok_and(|r| r.status().is_success());
-    let result = |r: &Result<reqwest::Response, reqwest::Error>| {
-        r.as_ref()
-            .map(|r| format!("HTTP {}", r.status().as_u16()))
-            .unwrap_or_else(|_| "连接失败 / 超时".into())
-    };
-    let label = format!("claude.ai {} · claude.com {}", result(&a), result(&b));
+    // HTTP 200 can be an availability error or browser challenge, not a usable page.
+    let (a, b, route) = tokio::join!(
+        crate::claude_probe::probe(&client, "https://claude.ai"),
+        crate::claude_probe::probe(&client, "https://claude.com"),
+        crate::claude_probe::trace(&client, "https://claude.ai/cdn-cgi/trace")
+    );
+    let ok = a.reachable && b.reachable;
+    let label = format!("claude.ai {} · claude.com {} · {}", a.label, b.label, route.unwrap_or_else(|| "Claude 同域名出口未取得，需浏览器复检".into()));
     scan.latency = if ok {
         Some(start.elapsed().as_millis())
     } else {
         None
     };
-    scan.checks[0] = check("connection", if ok { "healthy" } else { "manual" }, label, "本机 HTTPS 响应检查（含 VPN / TUN，不读取浏览器代理）；403、429 或连接失败需在浏览器验证，不代表账户状态。", false);
+    scan.checks[0] = check("connection", if ok { "healthy" } else { "manual" }, label, "本机 TCP HTTPS 页面检查（含 VPN / TUN，不读取浏览器代理）；地区不可用页面和验证挑战不会计为正常。通用 Cloudflare 出口不等于 Claude 分流出口。HTTP/3（QUIC）分流和账号可用性需在浏览器确认。", false);
     if let Ok(response) = client
         .get("https://www.cloudflare.com/cdn-cgi/trace")
         .send()

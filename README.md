@@ -11,7 +11,8 @@ Windows 与 macOS 的 Claude 环境诊断和可撤销配置工具。基于 Tauri
 - 并行启动、定位窗口、关闭与重启；支持名称、标签、备注、搜索、复制配置、最近删除、恢复与彻底删除。
 - 独立 Firefox 字体可见性设置，保留电脑原有字体；未安装时提供官方下载和重新检测。
 - 分别检查系统时区名称和实际 UTC 偏移，支持系统认可的自定义时区。
-- Claude Code 检查与专用启动器。
+- 终端：支持 Claude Code、ChatGPT / Codex CLI、Gemini CLI 和普通终端，检测安装状态并从指定工作目录启动。
+- 客户端支持简体中文与 English，默认跟随系统语言，可在「偏好设置 → 界面语言」切换并保存；界面语言不修改副本语言或终端 locale。
 - 可选用户字体处理、修改前备份、处理后核验及按项恢复。
 - 本地浏览器报告导入，以及应用内签名自动更新。
 
@@ -42,7 +43,7 @@ CI 分别使用 Windows、Apple Silicon Mac 和 Intel Mac 构建。产物保存�
 
 ## 自动发布
 
-更新 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 中的版本，提交后创建并推送 `v版本号` 标签，例如 `git tag v0.6.0`、`git push origin v0.6.0`。标签必须与三处主版本设置一致。
+更新 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 中的版本，提交后创建并推送 `v版本号` 标签，例如 `git tag v1.0.0`、`git push origin v1.0.0`。标签必须与三处主版本设置一致。
 
 GitHub Actions 会测试和构建 Windows x64、Mac Apple Silicon 和 Intel；所有平台通过后自动发布 GitHub Release，包括 Windows 安装版、便携版、两种 DMG、三端第三方许可归档和 `SHA256SUMS.txt`。主分支、PR 和手动运行只生成构建产物，推送版本标签才发布。已经公开的 Release 不会被工作流覆盖；失败任务可通过 Actions 重新运行。
 

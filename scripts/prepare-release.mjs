@@ -19,12 +19,12 @@ for(const [platform,name] of Object.entries(names)) {
   platforms[platform]={url:`https://github.com/nodecloak/nodecloak/releases/download/v${version}/${name}`,signature};
 }
 const releaseNotes=[
-  '去掉系统标题栏，窗口拖动、双击最大化及最小化、还原、关闭操作整合到应用顶部；关闭后仍收起到托盘。',
-  '桌面控件按 NodeCloak VI 统一设计：按钮、输入框、开关、复选框、分段选择器、状态标签和弹窗支持深浅色主题。',
-  'Chrome、Edge 和 Firefox 使用各自的 SVG 图标；滚动条缩小为 4px，仅在区域激活时显示，控件焦点通过边框变色提示。',
-  'Windows 任务栏和系统托盘采用透明幽灵图标，跟随 Windows 任务栏主题自动切换深浅配色。',
-  '修复电脑环境、环境概览及 Claude Code 页面区块间距、字体操作按钮间隔及较窄窗口的控件布局。',
-  '交流群统一为 https://t.me/nodecloak_official；源码、下载和签名自动更新统一使用 https://github.com/nodecloak/nodecloak。',
+  "客户端支持简体中文与 English，默认跟随系统语言，可在偏好设置切换并保存。 / Chinese and English UI, automatic system-language selection and saved preferences.",
+  "终端工作区支持 Claude Code、ChatGPT / Codex CLI、Gemini CLI 和普通终端，可检测安装状态、查看安装指南并选择工作目录。 / Terminal workspace for Claude Code, Codex CLI, Gemini CLI and a regular shell, with installation detection, setup guides and working-directory selection.",
+  "专用终端只设置进程语言与时区，保留已有代理、API 密钥及认证配置。 / Dedicated terminal launchers preserve existing proxy, API key and authentication settings.",
+  "改进 Claude 网络检测：识别地区不可用页面和验证挑战，分别检测 claude.ai 与 claude.com 的同域名 TCP 出口，明确 HTTP/3 路径需单独确认。 / Claude diagnostics distinguish unavailable-region pages and challenges, and report domain-specific TCP exits separately from HTTP/3 browser routes.",
+  "保留多浏览器副本与独立代理、字体可见性、深浅色主题、无系统标题栏设计及透明任务栏和托盘图标。 / Includes isolated browser profiles and proxies, font visibility controls, light/dark themes, frameless windows and transparent taskbar/tray icons.",
+  "修复环境概览和终端页面区块间距，统一浏览器 SVG 图标、细滚动条和边框焦点样式。 / Refined panel spacing, browser SVG icons, slim scrollbars and border-based focus styling."
 ];
 const manifest={version,notes:releaseNotes.map(note=>`- ${note}`).join('\n'),pub_date:new Date().toISOString(),platforms};
 fs.writeFileSync(path.join(directory,'latest.json'),JSON.stringify(manifest,null,2)+'\n');

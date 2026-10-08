@@ -1,4 +1,5 @@
 mod browser_control;
+mod claude_probe;
 mod data_root;
 mod engine;
 mod firefox;
@@ -8,6 +9,7 @@ mod profile_commands;
 mod profiles;
 mod proxy;
 mod regional;
+mod terminal;
 #[cfg(windows)]
 mod windows_icons;
 
@@ -326,6 +328,61 @@ async fn launch_cli(app: tauri::AppHandle) -> Result<(), String> {
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn list_terminal_tools() -> Result<terminal::Catalog, String> {
+    tauri::async_runtime::spawn_blocking(terminal::catalog).await.map_err(|e|e.to_string())
+}
+
+#[tauri::command]
+fn open_terminal_guide(tool: terminal::Tool) -> Result<(), String> {
+    terminal::open_guide(tool)
+}
+
+#[tauri::command]
+async fn get_system_languages() -> Vec<String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(windows)]
+        let output = platform::command("powershell.exe").args(["-NoProfile", "-NonInteractive", "-Command", "(Get-UICulture).Name"]).output();
+        #[cfg(target_os = "macos")]
+        let output = platform::command("/usr/bin/defaults").args(["read", "-g", "AppleLanguages"]).output();
+        #[cfg(not(any(windows, target_os = "macos")))]
+        let output: Result<std::process::Output, std::io::Error> = Err(std::io::Error::other("Unsupported platform"));
+        output.ok().filter(|result| result.status.success()).map(|result| {
+            String::from_utf8_lossy(&result.stdout).lines().filter_map(|line| {
+                let value = line.trim().trim_matches(|c:char| c=='"'||c==','||c.is_whitespace());
+                (value.len()>=2 && value.len()<=35 && value.bytes().all(|b|b.is_ascii_alphabetic()||b==b'-')).then(||value.to_string())
+            }).collect()
+        }).unwrap_or_default()
+    }).await.unwrap_or_default()
+}
+
+#[tauri::command]
+fn set_interface_language(app: tauri::AppHandle, language: String) -> Result<(), String> {
+    use tauri::menu::{Menu, MenuItem};
+    let (show_text, quit_text, tooltip) = match language.as_str() {
+        "zh" => ("打开 NodeCloak", "退出…", "NodeCloak · 浏览器副本与代理保持运行"),
+        "en" => ("Open NodeCloak", "Quit…", "NodeCloak · Browser profiles and proxies keep running"),
+        _ => return Err("Unsupported interface language".into()),
+    };
+    let show = MenuItem::with_id(&app, "show", show_text, true, None::<&str>).map_err(|e|e.to_string())?;
+    let quit = MenuItem::with_id(&app, "quit", quit_text, true, None::<&str>).map_err(|e|e.to_string())?;
+    let menu = Menu::with_items(&app, &[&show, &quit]).map_err(|e|e.to_string())?;
+    if let Some(tray) = app.tray_by_id("nodecloak-tray") {
+        tray.set_menu(Some(menu)).map_err(|e|e.to_string())?;
+        tray.set_tooltip(Some(tooltip)).map_err(|e|e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn launch_terminal(app: tauri::AppHandle, tool: terminal::Tool, working_directory: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let guard=app.state::<OperationLock>();
+        let _lock=guard.0.lock().map_err(|_|"操作锁不可用".to_string())?;
+        terminal::launch(&app.state::<data_root::DataRoot>().0,tool,&working_directory)
+    }).await.map_err(|e|e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -411,6 +468,11 @@ pub fn run() {
             undo_repair,
             launch_browser,
             launch_cli,
+            list_terminal_tools,
+            launch_terminal,
+            open_terminal_guide,
+            set_interface_language,
+            get_system_languages,
             profile_commands::list_profiles,
             profile_commands::save_profile,
             profile_commands::delete_profile,

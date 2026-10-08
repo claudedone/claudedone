@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import { useEffect, useState } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -19,9 +20,9 @@ export default function ThemeControl() {
     try { localStorage.setItem('nodecloak.theme', preference); } catch {}
     return () => media.removeEventListener('change', apply);
   }, [preference]);
-  return <div className="theme-control" role="group" aria-label="外观主题">{(['light','dark','system'] as const).map(value => {
+  return <div className="theme-control" role="group" aria-label={t("外观主题")}>{(['light','dark','system'] as const).map(value => {
     const Icon = value === 'light' ? Sun : value === 'dark' ? Moon : Monitor;
     const label = value === 'light' ? '浅色主题' : value === 'dark' ? '深色主题' : '跟随系统主题';
-    return <button key={value} aria-label={label} title={label} aria-pressed={preference === value} onClick={() => setPreference(value)}><Icon size={15} /></button>;
+    return <button key={value} aria-label={t(label)} title={t(label)} aria-pressed={preference === value} onClick={() => setPreference(value)}><Icon size={15} /></button>;
   })}</div>;
 }

@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Copy, Minus, Square, X } from 'lucide-react';
@@ -31,9 +32,9 @@ export default function WindowControls({ onError }: { onError: (message: string)
     }
   }
 
-  return <div className="window-controls" data-tauri-drag-region="false" role="group" aria-label="窗口操作">
-    <button title="最小化" aria-label="最小化" disabled={!native} onClick={() => void perform('minimize')}><Minus size={15} /></button>
-    <button title={maximized ? '还原窗口' : '最大化'} aria-label={maximized ? '还原窗口' : '最大化'} disabled={!native} onClick={() => void perform('toggleMaximize')}>{maximized ? <Copy size={14} /> : <Square size={14} />}</button>
-    <button className="window-close" title="关闭窗口并收起到托盘" aria-label="关闭窗口并收起到托盘" disabled={!native} onClick={() => void perform('close')}><X size={16} /></button>
+  return <div className="window-controls" data-tauri-drag-region="false" role="group" aria-label={t("窗口操作")}>
+    <button title={t("最小化")} aria-label={t("最小化")} disabled={!native} onClick={() => void perform('minimize')}><Minus size={15} /></button>
+    <button title={t(maximized ? '还原窗口' : '最大化')} aria-label={t(maximized ? '还原窗口' : '最大化')} disabled={!native} onClick={() => void perform('toggleMaximize')}>{maximized ? <Copy size={14} /> : <Square size={14} />}</button>
+    <button className="window-close" title={t("关闭窗口并收起到托盘")} aria-label={t("关闭窗口并收起到托盘")} disabled={!native} onClick={() => void perform('close')}><X size={16} /></button>
   </div>;
 }
