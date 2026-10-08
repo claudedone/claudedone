@@ -1,8 +1,28 @@
 # NodeCloak
 
+NodeCloak 帮助检查和调整使用 Claude 等 AI 服务时的语言、时区、字体和网络环境。**目标是减少可避免的环境暴露，降低被限制账号或封号的几率。**
+
 NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配置。每个副本可以单独设置代理、语言、时区和定位，也可以从指定项目目录启动 Claude Code、Codex CLI（ChatGPT）和 Gemini CLI。
 
 [下载安装包](https://github.com/nodecloak/nodecloak/releases/latest) · [官网与环境检测](https://nodecloak.com) · [Telegram 群](https://t.me/nodecloak_official)
+
+## 使用后的环境检测截图
+
+下面是用户提供的使用后复检截图：IPPure 和 FuckClaude 两个环境检测页面均显示 **3 分**。截图展示的是第三方检测页面读到的环境信号，不是 AI 服务的官方账号风控分数，也不能换算成实际封号概率。
+
+### IPPure：3 / 100
+
+该次复检显示时区为 UTC、浏览器语言为 `en-US, en`，剩余计分项为 Emoji 风格（+3）。
+
+![使用 NodeCloak 后的 IPPure 环境检测结果：3 / 100](docs/screenshots/environment-after-ippure.png)
+
+### FuckClaude：3 分，LOW RISK
+
+该次复检中，时区、浏览器语言、中文字体、Intl 区域设置和 UTC 偏移均为 0 分；剩余计分项为 Emoji 风格（+2）和 WebGL 渲染器（+1）。
+
+![使用 NodeCloak 后的 FuckClaude 环境检测结果：3 分，LOW RISK](docs/screenshots/environment-after-fuckclaude.png)
+
+两张截图的分数按各自检测网站的规则计算。复检请使用 NodeCloak 启动的对应副本，具体设置步骤见下文。
 
 ## 下载与使用
 
