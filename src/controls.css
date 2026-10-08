@@ -1,0 +1,389 @@
+/* NodeCloak VI, board 09: UI components (NodeCloak Logo(2).html).
+   Paper variants use Phosphor Deep for readable small text. */
+:root {
+  --control-bg: #efede7;
+  --control-border: #d7d5ce;
+  --secondary-border: #c5c4bd;
+  --control-text: #46505d;
+  --control-placeholder: #65707d;
+  --disabled-text: #777b80;
+  --card-bg: #fff;
+  --card-border: #dddcd5;
+  --warning-text: #86560e;
+  --warning-border: #b77a24;
+  --warning-bg: #f7eedf;
+  --error-text: #ad362e;
+  --error-border: #c4443a;
+  --switch-off: #c5c9cd;
+  --switch-knob: #65707d;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+:root[data-theme='dark'] {
+  --control-bg: #1a1f26;
+  --control-border: #2a313b;
+  --secondary-border: #3a424d;
+  --control-text: #c5cbd3;
+  --control-placeholder: #8b94a0;
+  --disabled-text: #5c6570;
+  --card-bg: #161b21;
+  --card-border: #222932;
+  --warning-text: #f2c27d;
+  --warning-border: #e3a857;
+  --warning-bg: rgb(227 168 87 / 14%);
+  --error-text: #f4978e;
+  --error-border: #f07167;
+  --switch-off: #2a313b;
+  --switch-knob: #8b94a0;
+}
+
+/* Actions: standard 46, dense table actions 36, dismiss actions 32. */
+button { transition: background .16s, border-color .16s, color .16s; }
+button svg.lucide, .nav-item svg.lucide { stroke-width: 1.75; }
+button:hover:not(:disabled) { filter: none; }
+button:active:not(:disabled) { transform: none; }
+.button, .hero-copy .button, .modal-actions .button, .profile-toolbar .button {
+  height: 46px;
+  min-height: 46px;
+  padding: 0 20px;
+  gap: 8px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: none;
+}
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--ink); font-weight: 700; }
+.button.primary:hover:not(:disabled) { background: #7debbb; border-color: #7debbb; box-shadow: none; }
+.button.secondary { background: transparent; border-color: var(--secondary-border); color: var(--text); }
+.button.secondary:hover:not(:disabled) { background: var(--control-bg); border-color: var(--green); }
+.button.compact, .button.small-button { height: 36px; min-height: 36px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+.icon-button, button.modal-close {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--control-bg);
+  color: var(--control-text);
+}
+.icon-button:hover:not(:disabled), button.modal-close:hover:not(:disabled) { border-color: var(--green); background: var(--control-bg); }
+button.modal-close { width: 32px; height: 32px; border-radius: 8px; }
+.button.danger, .icon-button.danger, .profile-menu button.danger {
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+  background: transparent;
+}
+.button.danger:hover:not(:disabled), .icon-button.danger:hover:not(:disabled), .profile-menu button.danger:hover:not(:disabled) { background: var(--warning-bg); }
+.button:disabled, .icon-button:disabled, button.modal-close:disabled {
+  opacity: 1;
+  background: var(--control-bg);
+  color: var(--disabled-text);
+  border-color: var(--control-border);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.row-action, .telegram-group {
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--secondary-border);
+  background: transparent;
+  color: var(--control-text);
+  font-size: 12px;
+  padding: 0 12px;
+}
+.row-action:hover:not(:disabled), .telegram-group:hover:not(:disabled) { border-color: var(--green); background: var(--control-bg); }
+.table-head, .check-row { grid-template-columns: minmax(215px, 1.28fr) minmax(120px, 1fr) 120px 108px; }
+.row-detail, .bottom-note>button, .info-card button, .about-card>button, .help-card button, .empty-state button, .content-footer>button, .timezone-settings-link {
+  color: var(--green);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+.profile-menu { padding: 8px; border-radius: 16px; border-color: var(--card-border); background: var(--card-bg); }
+.profile-menu button { min-height: 40px; padding: 8px 12px; border-radius: 10px; font-size: 14px; border: 1px solid transparent; }
+.profile-menu button:hover:not(:disabled) { background: var(--control-bg); border-color: var(--control-border); }
+.profile-name-button { border-radius: 10px; padding: 4px; margin: -4px; }
+.profile-name-button strong { font-size: 15px; font-weight: 700; }
+.profile-name-button small, .profile-muted { font-size: 12px; }
+
+/* Fields have the same surface, height and label scale throughout the app. */
+input, select, textarea { font-family: Sora, 'Segoe UI', system-ui, sans-serif; }
+input:not([type='checkbox']):not([type='radio']), select, textarea,
+.profile-form input, .profile-form select, .proxy-paste input,
+.timezone-picker input, .timezone-picker select, .profile-toolbar select {
+  height: 48px;
+  min-height: 48px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+  color: var(--text);
+  padding: 0 14px;
+  font-size: 15px;
+  line-height: 1.5;
+  box-shadow: none;
+  outline: none;
+}
+textarea, textarea.report-input { height: 200px; min-height: 120px; padding: 14px; font: 14px/1.6 'JetBrains Mono', monospace; }
+input::placeholder, textarea::placeholder { color: var(--control-placeholder); opacity: 1; }
+select { cursor: pointer; }
+select option { background: var(--control-bg); color: var(--text); }
+.profile-toolbar select { max-width: 180px; }
+.profile-form label, .custom-timezone-label { font-size: 13px; line-height: 1.5; color: var(--control-text); }
+.profile-form input, .profile-form select { margin-top: 8px; }
+.profile-form { gap: 16px; }
+.profile-field-hint, .advanced-card>p, .modal-subtitle, .app-dialog>p { font-size: 13px; line-height: 1.6; }
+.profile-search { height: 48px; min-height: 48px; padding: 0 14px; gap: 12px; background: var(--control-bg); border-color: var(--control-border); }
+.profile-search input:not([type='checkbox']):not([type='radio']) {
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 15px;
+  box-shadow: none;
+}
+.environment-line select { height: 32px; min-height: 32px; padding: 0 8px; font-size: 12px; max-width: 180px; }
+input:not([type='checkbox']):not([type='radio']):disabled, select:disabled, textarea:disabled {
+  opacity: 1;
+  color: var(--disabled-text);
+  border-color: var(--control-border);
+  cursor: not-allowed;
+}
+input[aria-invalid='true'], .timezone-picker input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--error-border); }
+.profile-error, .timezone-picker [role='alert'], .update-open-error { color: var(--error-text); font-size: 13px; line-height: 1.6; }
+
+/* Segmented choices share the VI's 4px inset and solid Phosphor selection. */
+.proxy-modes, .profile-editor-tabs, .theme-control, .filter-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--control-bg);
+}
+.profile-editor-tabs { margin-bottom: 24px; width: fit-content; max-width: 100%; }
+.proxy-modes button, .profile-editor-tabs button, .filter-tabs>button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--control-text);
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0;
+  box-shadow: none;
+}
+.proxy-modes button.selected, .profile-editor-tabs button.selected, .filter-tabs>button.selected,
+.theme-control button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: none;
+}
+.proxy-modes button:hover:not(:disabled):not(.selected), .profile-editor-tabs button:hover:not(:disabled):not(.selected), .filter-tabs>button:hover:not(.selected) { border-color: var(--secondary-border); }
+.theme-control button { width: 36px; height: 36px; border-radius: 10px; color: var(--control-text); }
+.theme-control button:hover { border-color: var(--secondary-border); }
+.proxy-modes button:disabled, .profile-editor-tabs button:disabled { opacity: .5; cursor: not-allowed; }
+.filter-tabs { width: fit-content; max-width: 100%; flex-wrap: wrap; margin-bottom: 16px; }
+.filter-tabs>button>span { font: 11px 'JetBrains Mono', monospace; border-radius: 6px; padding: 2px 5px; background: color-mix(in srgb, currentColor 10%, transparent); }
+.nav-item { border: 1px solid transparent; }
+.nav-item.active { border-color: var(--green); background: var(--control-bg); color: var(--text); }
+.nav-item.active svg { color: var(--green); }
+.active-profile-bar button { min-height: 32px; border: 1px solid transparent; border-radius: 8px; font-size: 12px; }
+.active-profile-bar button.selected { color: var(--green); border-color: var(--green); background: transparent; }
+
+/* Switches retain the native input, including Space, Tab and disabled behavior. */
+.pending-toggle, .toggle-control { position: relative; }
+.toggle-control { display: inline-flex; flex: 0 0 40px; width: 40px; height: 24px; }
+.pending-toggle>input, .toggle-control>input, .repair-option>input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  opacity: 0;
+}
+.pending-toggle .switch, .toggle-control .switch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 40px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--switch-off);
+  position: relative;
+  transition: background .16s, border-color .16s;
+}
+.pending-toggle .switch::after, .toggle-control .switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--switch-knob);
+  box-shadow: none;
+  transition: transform .16s, background .16s;
+}
+.pending-toggle input:checked+.switch, .toggle-control input:checked+.switch { background: var(--accent); }
+.pending-toggle input:checked+.switch::after, .toggle-control input:checked+.switch::after { transform: translateX(16px); background: var(--ink); }
+.advanced-toggle { min-height: 52px; padding: 16px 0; gap: 16px; border-color: var(--card-border); }
+.advanced-toggle strong { font-size: 15px; font-weight: 500; line-height: 1.5; }
+.advanced-toggle small { font-size: 13px; line-height: 1.6; }
+.advanced-toggle em { font: 10px 'JetBrains Mono', monospace; padding: 3px 6px; border-radius: 6px; }
+.advanced-toggle:has(input:disabled) { opacity: 1; cursor: not-allowed; }
+.advanced-toggle:has(input:disabled) strong, .advanced-toggle:has(input:disabled) small { color: var(--disabled-text); }
+.toggle-control input:disabled+.switch, .pending-toggle input:disabled+.switch { opacity: .45; cursor: not-allowed; }
+
+/* Checkboxes use a 22px target and a 6px corner, independent of OS styling. */
+input[type='checkbox']:not(.toggle-control input):not(.pending-toggle input):not(.repair-option input), input[type='radio'] {
+  appearance: none;
+  display: inline-block;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  vertical-align: middle;
+  border: 1px solid var(--secondary-border);
+  border-radius: 6px;
+  background-color: var(--control-bg);
+  cursor: pointer;
+}
+input[type='checkbox']:checked:not(.toggle-control input):not(.pending-toggle input):not(.repair-option input) {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m5 12 4 4 10-10' fill='none' stroke='%2311151B' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+input[type='checkbox']:disabled { cursor: not-allowed; }
+.profile-checkbox { font-size: 13px; line-height: 1.6; gap: 12px; }
+.profile-checkbox input, .timezone-consent input { margin-top: 2px; }
+.repair-option .custom-checkbox { width: 22px; height: 22px; border-radius: 6px; border-color: var(--secondary-border); background: var(--control-bg); color: var(--ink); }
+.repair-option.checked .custom-checkbox { background: var(--accent); border-color: var(--accent); }
+.custom-checkbox svg { width: 16px; height: 16px; stroke-width: 3; }
+.repair-option { padding: 16px; gap: 12px; border-radius: 16px; border-color: var(--card-border); background: var(--card-bg); }
+.repair-option.checked { border-color: var(--green); background: var(--card-bg); }
+.repair-option strong { font-size: 15px; color: var(--text); }
+.repair-option small { font-size: 13px; line-height: 1.6; }
+.repair-option:has(input:disabled) { cursor: not-allowed; opacity: .6; }
+.browser-option { border-radius: 16px; padding: 18px; background: var(--control-bg); border-color: var(--control-border); }
+.browser-option.chosen { border-color: var(--green); background: var(--control-bg); }
+.browser-option strong { font-size: 15px; color: var(--text); }
+.browser-option small { font-size: 12px; }
+.radio-dot { width: 22px; height: 22px; border-color: var(--secondary-border); }
+.chosen .radio-dot { border-color: var(--green); }
+.chosen .radio-dot>span { width: 12px; height: 12px; background: var(--green); }
+
+/* Technical status pills use Mono; explanatory copy always stays in Sora. */
+.status, .profile-state, .settings-tag, .record-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  font: 12px/1.4 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  background: var(--control-bg);
+  color: var(--control-text);
+}
+.status>span, .profile-state i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.profile-state:not(.running) i { background: transparent; border: 1.5px solid var(--control-placeholder); }
+.status-healthy, .status-configured, .profile-state.running, .record-status.applied { background: transparent; border-color: var(--green); color: var(--green); }
+.profile-state.running i { background: var(--green); }
+.status-warning, .record-status.failed, .record-status.pending { background: var(--warning-bg); color: var(--warning-text); }
+.profile-tags>span, .protected-fonts>span, .tiny-label { border-radius: 6px; padding: 3px 7px; font: 11px/1.4 'JetBrains Mono', monospace; color: var(--control-text); background: var(--control-bg); }
+
+/* Feedback surfaces, cards and sheets follow the same 4px spacing rhythm. */
+.settings-card, .advanced-card, .profile-preview, .info-card, .environment-card, .history-record {
+  border-radius: 20px;
+  border-color: var(--card-border);
+  background: var(--card-bg);
+  padding: 24px;
+}
+.settings-card>h3, .advanced-card h3, .profile-preview h3, .info-card h3 { font-size: 17px; line-height: 1.4; font-weight: 700; }
+.settings-card>p, .settings-line p, .profile-preview>p, .info-card p { font-size: 14px; line-height: 1.6; }
+.settings-line strong { font-size: 15px; font-weight: 500; }
+.profile-preview dl>div { font-size: 12px; line-height: 1.6; }
+.profile-preview dd { font-family: 'JetBrains Mono', monospace; }
+.notice, .region-match, .advanced-caution, .timezone-consent, .update-banner { border-radius: 16px; padding: 16px 18px; background: var(--control-bg); border-color: var(--control-border); font-size: 13px; line-height: 1.6; }
+.notice p { font-size: 13px; line-height: 1.6; color: var(--control-text); }
+.warning-notice, .advanced-caution, .timezone-consent { background: var(--warning-bg); color: var(--warning-text); border-color: color-mix(in srgb, var(--warning-border) 35%, transparent); }
+.warning-notice p { color: var(--warning-text); }
+.toast, .profile-notice { border-radius: 16px; padding: 16px 18px; gap: 14px; background: var(--paper); border: 1px solid #dddcd5; color: var(--ink); font-size: 15px; line-height: 1.6; }
+.toast>svg, .profile-notice>svg { color: #0b6e48; flex-shrink: 0; }
+.toast>button { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border-radius: 8px; color: #4f5763; flex-shrink: 0; }
+.toast.error { background: var(--warning-bg); border-color: var(--warning-border); color: var(--warning-text); }
+.app-dialog, .modal { border-radius: 24px; border-color: var(--card-border); }
+.modal-content { padding: 32px; }
+.modal-subtitle { margin-bottom: 24px; }
+.modal-actions { gap: 12px; flex-wrap: wrap; }
+.profile-editor .modal-actions { padding: 16px 0 8px; }
+.update-progress progress { height: 8px; accent-color: var(--accent); }
+.update-progress progress::-webkit-progress-bar { background: var(--control-bg); }
+.update-progress progress::-webkit-progress-value { background: var(--accent); }
+.update-progress progress::-moz-progress-bar { background: var(--accent); }
+details>summary { border-radius: 8px; padding: 8px; font-size: 13px; }
+
+/* Focus changes the actual control boundary, without an inner outline or glow. */
+:root button:focus-visible, :root summary:focus-visible,
+:root input:focus-visible, :root select:focus-visible, :root textarea:focus-visible,
+:root input:not([type='checkbox']):not([type='radio']):focus,
+:root select:focus, :root textarea:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--green);
+}
+:root .profile-search:focus-within { border-color: var(--green); }
+:root .button.primary:focus-visible, :root .proxy-modes button.selected:focus-visible,
+:root .profile-editor-tabs button.selected:focus-visible, :root .filter-tabs>button.selected:focus-visible,
+:root .theme-control button[aria-pressed='true']:focus-visible, :root .nav-item.active:focus-visible,
+:root .browser-option.chosen:focus-visible { border-color: var(--text); }
+:root .profile-search input:focus, :root .profile-search input:focus-visible { outline: none; border: 0; box-shadow: none; }
+:root input:not([type='checkbox']):not([type='radio'])[aria-invalid='true']:is(:focus, :focus-visible),
+:root select[aria-invalid='true']:focus, :root textarea[aria-invalid='true']:focus { border-color: var(--error-border); }
+.timezone-picker input[aria-invalid='true']~#timezone-input-status { color: var(--error-text); }
+:root .toggle-control input:focus-visible+.switch, :root .pending-toggle input:focus-visible+.switch,
+:root .repair-option input:focus-visible+.custom-checkbox { outline: none; border-color: var(--green); box-shadow: none; }
+:root .toggle-control input:checked:focus-visible+.switch, :root .pending-toggle input:checked:focus-visible+.switch,
+:root .repair-option input:checked:focus-visible+.custom-checkbox,
+:root input[type='checkbox']:checked:focus-visible { border-color: var(--ink); }
+
+@media (max-width: 1100px) {
+  .profile-toolbar { flex-wrap: wrap; }
+  .profile-search { flex: 1 1 260px; }
+  .topbar-right { flex-wrap: wrap; }
+  .proxy-modes button { padding: 0 12px; font-size: 13px; }
+}
+@media (max-width: 1000px) {
+  .table-head, .check-row { grid-template-columns: minmax(200px, 1fr) 108px 108px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button, .switch, .switch::after { transition: none; }
+}
+@media (forced-colors: active) {
+  .switch, .custom-checkbox, input[type='checkbox'] { border-color: ButtonText; }
+  .switch::after { background: ButtonText; }
+  input[type='checkbox']:not(.toggle-control input):not(.pending-toggle input):not(.repair-option input) { appearance: auto; }
+  :root button:focus-visible, :root input:focus-visible, :root select:focus-visible, :root textarea:focus-visible,
+  :root .toggle-control input:focus-visible+.switch, :root .pending-toggle input:focus-visible+.switch,
+  :root .repair-option input:focus-visible+.custom-checkbox { border-color: Highlight; }
+}

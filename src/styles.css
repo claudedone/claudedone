@@ -81,3 +81,30 @@ body{background:var(--bg);color:var(--text)}.app-shell{display:grid;grid-templat
 @media(max-width:1120px){.app-shell{grid-template-columns:204px minmax(0,1fr)}.sidebar{width:204px;padding:26px 14px 0}.brand>span{font-size:19px}.brand-mark{width:36px;height:36px}.brand small{font-size:8px}.main-content{padding:27px 24px 0}.topbar{padding:0 24px}.profile-intro{padding:28px;min-height:172px}.profile-intro h2{font-size:22px}.profile-metrics{gap:20px}.profile-metrics strong{font-size:34px}.topbar-right{gap:9px}.platform-label{display:none}}
 @media(max-width:940px){.app-shell{grid-template-columns:184px minmax(0,1fr)}.sidebar{width:184px;padding:24px 12px 0}.brand>span{font-size:17px}.brand small{font-size:7px}.brand-mark{width:32px;height:32px}.main-content{padding:25px 20px 0}.topbar{padding:0 20px}.profile-intro{padding:24px}.profile-metrics{gap:16px}.profile-metrics strong{font-size:28px}.demo-badge{display:none}.page-heading h1{font-size:25px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Browser identity stays recognizable in both themes. */
+.browser-icon.chrome,.browser-icon.edge,.browser-icon.firefox{background:transparent;border-radius:0}
+.browser-icon img{display:block;width:20px;height:20px;object-fit:contain;flex-shrink:0}
+.environment-line .browser-icon img{width:16px;height:16px}
+.browser-option .browser-icon img{width:28px;height:28px}
+
+/* Keep scroll gutters narrow and quiet until their own region is active. */
+:root{--scrollbar-thumb:color-mix(in srgb,var(--muted) 45%,transparent)}
+*{scrollbar-width:thin;scrollbar-color:transparent transparent}
+*:hover,*:focus-within{scrollbar-color:var(--scrollbar-thumb) transparent}
+*::-webkit-scrollbar{width:4px;height:4px}
+*::-webkit-scrollbar-track,*::-webkit-scrollbar-corner{background:transparent}
+*::-webkit-scrollbar-thumb{background:transparent;border-radius:999px}
+*:hover::-webkit-scrollbar-thumb,*:focus-within::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb)}
+*::-webkit-scrollbar-thumb:active{background:var(--muted)}
+*::-webkit-scrollbar-button{display:none;width:0;height:0}
+@supports selector(::-webkit-scrollbar){*,*:hover,*:focus-within{scrollbar-width:auto;scrollbar-color:auto}}
+
+/* Highlight the control boundary, never an inner text-input outline. */
+button,summary{border:1px solid transparent}
+:root button:focus-visible,:root summary:focus-visible{outline:0;border-color:var(--green);box-shadow:none}
+input:not([type=checkbox]):not([type=radio]):is(:focus,:focus-visible),
+select:is(:focus,:focus-visible),textarea:is(:focus,:focus-visible){outline:0;border-color:var(--green);box-shadow:none}
+.profile-search:focus-within{border-color:var(--green)}
+.profile-search input:is(:focus,:focus-visible){outline:0;border:0;box-shadow:none}
+.pending-toggle input:focus-visible+.switch,.repair-option input:focus-visible+.custom-checkbox{outline:0;border:1px solid var(--green)}

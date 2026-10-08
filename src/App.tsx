@@ -5,6 +5,7 @@ import { parseBrowserReport, withBrowserReport, type BrowserReport } from './bro
 import AppUpdates from './AppUpdates';
 import ThemeControl from './ThemeControl';
 import BrowserProfiles from './BrowserProfiles';
+import BrowserIcon from './BrowserIcon';
 import {listProfiles,quitApplication,type BrowserProfile} from './browser-profiles';
 import {setActiveProfile} from './bridge';
 import {listen} from '@tauri-apps/api/event';
@@ -31,9 +32,6 @@ const pageText: Record<Page, [string, string]> = {
 const browserNames = { chrome: 'Google Chrome', edge: 'Microsoft Edge', firefox: 'Firefox' };
 function Mark({ small = false }: { small?: boolean }) { return <span className={small ? 'brand-mark small' : 'brand-mark'}><img className="mark-light" src="/brand/symbol-positive.svg" alt="" /><img className="mark-dark" src="/brand/symbol-primary.svg" alt="" /></span>; }
 function Status({ status }: { status: EnvironmentCheck['status'] }) { return <span className={`status status-${status}`}><span />{labels[status]}</span>; }
-function BrowserIcon({ browser }: { browser: BrowserId }) {
-  return <span className={`browser-icon ${browser}`}><Globe2 size={18} /></span>;
-}
 function Orbit({ count, total }: { count: number; total: number }) {
   return <div className="orbit" aria-label={`${count} 项建议调整`}>
     <svg viewBox="0 0 190 190" aria-hidden="true"><circle cx="95" cy="95" r="79" className="orbit-track" /><circle cx="95" cy="95" r="79" className="orbit-progress" strokeDasharray={`${(count / total) * 496} 496`} /><circle cx="95" cy="95" r="61" className="orbit-inner" />{Array.from({ length: 36 }, (_, i) => <line key={i} x1="95" y1="41" x2="95" y2="45" transform={`rotate(${i * 10} 95 95)`} />)}</svg>
@@ -234,7 +232,7 @@ export default function App() {
 
         {page === 'settings' && <>
           <section className="settings-card"><h3>后台运行与退出</h3><p>关闭主窗口会保留运行中的浏览器副本和代理，可从系统托盘或菜单栏重新打开。</p><button className="button secondary" disabled={!!busy} onClick={()=>{setQuitError('');setQuitting(true);}}>退出应用…</button></section>
-          <section className="settings-card"><h3>专用浏览器</h3><p>独立环境支持 Chrome、Edge 和 Firefox。Firefox 可单独限制字体可见性，保留电脑字体。切换后，将检测对应浏览器的专用配置。</p><div className="browser-options">{(['chrome', 'edge', 'firefox'] as BrowserId[]).map(id => <button className={`browser-option ${id === browser ? 'chosen' : ''}`} key={id} disabled={!!busy} onClick={() => void switchBrowser(id)}><BrowserIcon browser={id} /><div><strong>{browserNames[id]}</strong><small>独立配置 · 首次使用需重新登录</small></div><span className="radio-dot">{id === browser && <span />}</span></button>)}</div></section>
+          <section className="settings-card"><h3>专用浏览器</h3><p>独立环境支持 Chrome、Edge 和 Firefox。Firefox 可单独限制字体可见性，保留电脑字体。切换后，将检测对应浏览器的专用配置。</p><div className="browser-options">{(['chrome', 'edge', 'firefox'] as BrowserId[]).map(id => <button className={`browser-option ${id === browser ? 'chosen' : ''}`} key={id} aria-pressed={id === browser} disabled={!!busy} onClick={() => void switchBrowser(id)}><BrowserIcon browser={id} /><div><strong>{browserNames[id]}</strong><small>独立配置 · 首次使用需重新登录</small></div><span className="radio-dot">{id === browser && <span />}</span></button>)}</div></section>
           <section className="settings-card"><h3>修复方式</h3><div className="settings-line"><div><strong>自动备份与撤销</strong><p>每项修复写入前保存原值，修复记录仅保存在本机。</p></div><span className="settings-tag"><Check size={13} />始终开启</span></div><div className="settings-line"><div><strong>系统时区</strong><p>一键修复默认不修改系统时区，可在修复面板中单独选择。</p></div><span className="settings-tag neutral">手动选择</span></div><div className="settings-line"><div><strong>检测请求</strong><p>检测时请求 claude.ai、claude.com 与 Cloudflare，获取 HTTPS 状态和本机出口 IP。</p></div><span className="settings-tag neutral">应用启动或检测时运行</span></div></section>
           <section className="settings-card about-card"><div className="brand"><Mark small /><span>NodeCloak<small>版本 {version} · Tauri 2</small></span></div><p>独立开发的环境助手，非 Anthropic 官方产品。检测与配置结果不能预测账户风控或保证服务可用。</p><button onClick={() => setModal({ kind: 'help' })}>使用指南<ArrowUpRight size={14} /></button></section>
         </>}

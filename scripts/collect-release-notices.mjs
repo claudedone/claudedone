@@ -10,6 +10,7 @@ const output=path.join(projectRoot,'release-notices',platform);
 fs.mkdirSync(output,{recursive:true});
 fs.copyFileSync(path.join(projectRoot,'LICENSE'),path.join(output,'NodeCloak-LICENSE'));
 fs.copyFileSync(path.join(projectRoot,'docs/branding.md'),path.join(output,'branding.md'));
+fs.copyFileSync(path.join(projectRoot,'public/browsers/README.md'),path.join(output,'browser-logos.md'));
 for (const name of ['Sora-OFL.txt','JetBrainsMono-OFL.txt']) fs.copyFileSync(path.join(projectRoot,'public/brand/fonts',name),path.join(output,name));
 const lines=[`# NodeCloak ${version} — ${platform}`, '', 'Dependency license declarations for this build. License and notice files found in installed packages are included below. Development/build dependencies are also listed. Dependencies are not relicensed by NodeCloak.', '', '| Package | Version | License |', '| --- | --- | --- |'];
 function notices(source,destination,extra) {

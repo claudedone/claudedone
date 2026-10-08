@@ -8,6 +8,8 @@ mod profile_commands;
 mod profiles;
 mod proxy;
 mod regional;
+#[cfg(windows)]
+mod windows_icons;
 
 #[tauri::command]
 fn is_portable_build() -> Result<bool, String> {
@@ -369,8 +371,12 @@ pub fn run() {
             let show = MenuItem::with_id(app, "show", "打开 NodeCloak", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出…", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+            #[cfg(windows)]
+            let tray_icon = windows_icons::initial_tray_icon();
+            #[cfg(not(windows))]
+            let tray_icon = app.default_window_icon().unwrap().clone();
+            TrayIconBuilder::with_id("nodecloak-tray")
+                .icon(tray_icon)
                 .tooltip("NodeCloak · 浏览器副本与代理保持运行")
                 .menu(&menu)
                 .on_menu_event(|app, event| {
@@ -385,6 +391,8 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+            #[cfg(windows)]
+            windows_icons::start(app.handle())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -88,7 +88,7 @@ export default function AppUpdates({ expanded, busy=false, onBusyChange }: { exp
   return <section className={expanded ? 'settings-card app-updates' : 'update-banner'} aria-label="应用更新">
     {expanded && <>
       <div className="update-heading"><div><h3>应用更新</h3><p>当前版本 {version}{!native && ' · 演示模式'}</p></div><span className="settings-tag neutral">稳定版</span></div>
-      <div className="settings-line"><div><strong>自动检查更新</strong><p>启动时和每 6 小时检查新版本，可直接在应用内更新。</p></div><label className="pending-toggle"><input type="checkbox" checked={automatic} disabled={updating} onChange={event => toggleAutomatic(event.target.checked)} aria-label="自动检查更新" /><span className="switch" /></label></div>
+      <div className="settings-line"><div><strong>自动检查更新</strong><p>启动时和每 6 小时检查新版本，可直接在应用内更新。</p></div><label className="pending-toggle"><input type="checkbox" role="switch" checked={automatic} disabled={updating} onChange={event => toggleAutomatic(event.target.checked)} aria-label="自动检查更新" /><span className="switch" /></label></div>
       <div className="update-status" role="status" aria-live="polite">
         {checking ? <><LoaderCircle size={16} className="spin" /><span>正在检查新版本…</span></> : error ? <><CircleAlert size={16} /><span>{error}</span></> : result ? <><Check size={16} /><span>{result.available ? `发现新版本 ${result.latestVersion}` : result.supported ? '当前已是最新版本' : '此平台暂无可下载的官方安装包'}</span></> : <span>尚未检查更新</span>}
       </div>
