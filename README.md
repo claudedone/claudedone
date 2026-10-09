@@ -35,7 +35,7 @@ NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配�
 | macOS M 系列 | `_macos_arm64.dmg` | 打开 DMG，将应用拖入 Applications |
 | macOS Intel | `_macos_x64.dmg` | 打开 DMG，将应用拖入 Applications |
 
-当前 Windows 包未做 Authenticode 代码签名，macOS 包未做 Apple 公证。macOS 首次打开被拦截时，可在「系统设置 → 隐私与安全性」中查看并允许打开。
+1.0.0 的 Windows 安装版、便携版及安装后的程序已使用提供的证书做 Authenticode 签名。证书发布者为 `Anneng electronic Co. Ltd.`，已于 2014 年 5 月 6 日过期；该签名不能获得 Windows 有效证书信任，也不保证消除 SmartScreen 提示。macOS Apple Silicon 与 Intel 的 DMG 已使用 Nodeloc LLC 的 Developer ID 签名并通过 Apple 公证；应用内更新归档仍保留原发布文件。
 
 使用浏览器副本：
 

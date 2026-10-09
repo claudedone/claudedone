@@ -1,0 +1,43 @@
+name: Sign Authenticode Windows package for app updates
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing release version (without v)
+        required: true
+        type: string
+      sha256:
+        description: SHA256 of the staged Authenticode installer
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  sign:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Fetch and check the staged installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          EXPECTED_SHA256: ${{ inputs.sha256 }}
+        run: node scripts/fetch-windows-signing-input.mjs
+      - name: Create app update signature
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+          VERSION: ${{ inputs.version }}
+        run: node scripts/tauri.mjs signer sign --app-version "$VERSION" signing-input/setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-update-signature
+          path: signing-input/setup.exe.sig
+          if-no-files-found: error
