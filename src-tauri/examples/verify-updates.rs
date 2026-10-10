@@ -4,14 +4,19 @@ use serde_json::Value;
 use std::{error::Error, fs, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let root = PathBuf::from(std::env::args().nth(1).ok_or("Usage: verify-updates <release-assets-directory>")?);
+    let root = PathBuf::from(std::env::args().nth(1).ok_or("Usage: verify-updates <release-assets-directory> [windows-x86_64|darwin-aarch64|darwin-x86_64]")?);
     let config: Value = serde_json::from_slice(&fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/tauri.conf.json"))?)?;
     let public_key = String::from_utf8(STANDARD.decode(config["plugins"]["updater"]["pubkey"].as_str().ok_or("Missing update public key")?)?)?;
     let key = PublicKey::decode(&public_key)?;
     let manifest: Value = serde_json::from_slice(&fs::read(root.join("latest.json"))?)?;
     let version = manifest["version"].as_str().ok_or("Missing update version")?;
     let platforms = manifest["platforms"].as_object().ok_or("Missing updater platforms")?;
-    for platform in ["windows-x86_64", "darwin-aarch64", "darwin-x86_64"] {
+    let selected = std::env::args().nth(2);
+    let supported = ["windows-x86_64", "darwin-aarch64", "darwin-x86_64"];
+    if selected.as_deref().is_some_and(|platform| !supported.contains(&platform)) {
+        return Err("Unknown verification platform".into());
+    }
+    for platform in supported.into_iter().filter(|platform| selected.as_deref().is_none_or(|value| value == *platform)) {
         let entry = platforms.get(platform).ok_or("Missing platform update")?;
         let url = reqwest::Url::parse(entry["url"].as_str().ok_or("Missing update URL")?)?;
         if url.scheme() != "https" || url.host_str() != Some("github.com") || !url.path().starts_with(&format!("/nodecloak/nodecloak/releases/download/v{version}/")) {

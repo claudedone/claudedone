@@ -41,4 +41,3 @@ jobs:
           name: windows-update-signature
           path: signing-input/setup.exe.sig
           if-no-files-found: error
-
