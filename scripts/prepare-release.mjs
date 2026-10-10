@@ -18,11 +18,12 @@ for(const [platform,name] of Object.entries(names)) {
   if(!decoded.startsWith('untrusted comment:') || !decoded.includes('trusted comment:') || !decoded.includes(`\tversion:${version}`)) throw new Error(`Invalid or mismatched updater signature file: ${platform}`);
   platforms[platform]={url:`https://github.com/nodecloak/nodecloak/releases/download/v${version}/${name}`,signature};
 }
+// Update notices list only implemented features and bug fixes.
 const releaseNotes=[
-  "高级设置移除副本时区与地理位置来源，浏览器沿用系统时区；旧配置自动清理，保留语言设置与定位权限。 / Profiles use the system timezone; obsolete timezone and location-source settings are migrated, while language and location permissions remain configurable.",
-  "新增独立系统时间检查，通过当前网络路径比较 HTTPS 时间参考，无法确认时显示待确认，支持打开系统时间设置。 / Independent clock diagnostics compare an HTTPS time reference over the current network route, with unknown results and a system clock settings shortcut.",
-  "电脑环境不再使用导入浏览器报告中的旧时区，窄窗口保留时区和 UTC 偏移值。 / Computer diagnostics use current system values rather than stale imported browser reports, and keep values visible in narrow windows.",
-  "自定义语言且无需模拟定位时，不再启用浏览器自动化控制；补充验证失败排查说明。 / Custom language without location emulation avoids unnecessary automation; verification troubleshooting is included."
+  "移除高级设置中的副本时区和地理位置来源，浏览器使用系统时区。 / Removed per-profile timezone and location-source settings; browsers use the system timezone.",
+  "新增系统时间检查，可打开系统时间设置。 / Added system clock diagnostics and a shortcut to system time settings.",
+  "修复电脑环境显示旧时区、窄窗口隐藏时区和 UTC 偏移的问题。 / Fixed stale computer timezone values and hidden timezone details in narrow windows.",
+  "自定义语言且无需模拟定位时，避免启用不必要的浏览器自动化。 / Avoided unnecessary browser automation when using custom language without location emulation."
 ];
 const manifest={version,notes:releaseNotes.map(note=>`- ${note}`).join('\n'),pub_date:new Date().toISOString(),platforms};
 fs.writeFileSync(path.join(directory,'latest.json'),JSON.stringify(manifest,null,2)+'\n');

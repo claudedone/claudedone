@@ -163,7 +163,7 @@ Windows 上生成 NSIS 安装包和可执行文件；macOS 上生成应用与 DM
 
 ## 维护者发布
 
-1. 同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 的版本，并更新 `scripts/prepare-release.mjs` 中的发布说明。
+1. 同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 的版本，并更新 `scripts/prepare-release.mjs` 中的发布说明。更新提示只记录本版实际功能变更与修复，不包含签名、公证、未完成事项或未更新的平台。
 2. 执行 `node scripts/check-release-version.mjs`、`node --test scripts/release-checks.mjs` 和上述代码检查。
 3. 提交代码，创建并推送与版本一致的 `v<版本>` 标签。三个平台全部构建成功后，GitHub Actions 保存 Release 草稿；完成平台签名和验证后手动公开，已公开的 Release 不会被覆盖。
 
