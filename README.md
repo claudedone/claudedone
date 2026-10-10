@@ -2,7 +2,7 @@
 
 NodeCloak 帮助检查和调整使用 Claude 等 AI 服务时的语言、时区、字体和网络环境。**目标是减少可避免的环境暴露，降低被限制账号或封号的几率。**
 
-NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配置。每个副本可以单独设置代理、语言、时区和定位，也可以从指定项目目录启动 Claude Code、Codex CLI（ChatGPT）和 Gemini CLI。
+NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配置。每个副本可以单独设置代理、语言和网站权限，也可以从指定项目目录启动 Claude Code、Codex CLI（ChatGPT）和 Gemini CLI。
 
 [下载安装包](https://github.com/nodecloak/nodecloak/releases/latest) · [官网与环境检测](https://nodecloak.com) · [Telegram 群](https://t.me/nodecloak_official)
 
@@ -40,7 +40,7 @@ NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配�
 使用浏览器副本：
 
 1. 先安装 Chrome、Edge 或 Firefox。NodeCloak 不内置浏览器；未找到 Firefox 时，应用会提供[官方下载入口](https://www.firefox.com/en-US/download/all/desktop-release/)。
-2. 在「浏览器副本」点击「新建副本」，填写名称，选择浏览器和代理。在高级设置中选择语言、时区、定位和网站权限。
+2. 在「浏览器副本」点击「新建副本」，填写名称，选择浏览器和代理。在高级设置中选择语言、隐私保护和网站权限。
 3. 测试代理后启动副本，在新窗口中登录需要使用的网站。副本有独立的配置目录，不复制日常浏览器的登录信息。
 4. 从该副本打开「本地复检」或官网检测页，查看网页实际读到的值。需要保存结果时，将报告导入对应副本。
 
@@ -55,11 +55,12 @@ NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配�
 | 副本管理 | 名称、标签、备注、搜索、标签筛选、同时启动多个副本、定位窗口、关闭和重启 |
 | 代理 | 直连、系统代理、HTTP、HTTPS、SOCKS5；支持账号密码和代理链接填写 |
 | 语言 | 跟随出口 IP 匹配，或自定义语言列表 |
-| 时区 | 跟随出口 IP、自定义 IANA 时区或跟随电脑；独立时区包含 UTC 偏移和夏令时 |
-| 定位 | 询问、允许或禁用；位置可使用 IP 大致位置、自定义经纬度或浏览器默认 |
+| 时区 | 普通模式跟随电脑系统；Firefox 严格指纹保护统一为 UTC。系统时区可在「电脑环境」中修改 |
+| 系统时钟 | 独立比较电脑实际时间与 HTTPS 服务端时间；超出 2 分钟容差时提示同步系统时间，取不到参考时显示尚未确认 |
+| 定位 | 询问、允许或禁用；位置由浏览器提供，不覆盖坐标 |
 | 网站设置 | 启动页面、WebRTC、DNS 隐私、DNT / GPC、通知、摄像头、麦克风和图片加载设置 |
 | Firefox 字体 | 限制该副本可见的系统字体，保留电脑上的中文字体 |
-| Firefox 其他设置 | 可选严格指纹保护、禁用 WebGL；严格指纹保护与独立区域设置互斥 |
+| Firefox 其他设置 | 可选严格指纹保护、禁用 WebGL；严格指纹保护与语言的 IP 匹配互斥 |
 | 检测与修复 | 检查网络、语言、时区、字体等；按项或一键应用支持的设置，修改前备份 |
 | 修复记录 | 查看修改内容，按记录恢复 |
 | 删除 | 移至最近删除、恢复、彻底删除；彻底删除会清理该副本数据及代理凭据 |
@@ -79,7 +80,9 @@ NodeCloak 在 Windows 和 macOS 上管理独立的 Chrome、Edge、Firefox 配�
 
 「设置已写入」表示配置已保存；网页实际值需要在重启后的副本中复检。网页检测分数是环境信号的加权结果，不能据此判断账号会不会被封，也不能证明 Claude Code 进程被标记。
 
-Chrome / Edge 使用真实的硬件指纹，没有提供任意 User Agent、Canvas / Audio 噪音或虚拟内存、核心数。使用独立语言、时区和定位时，浏览器通过原生自动化接口应用设置，网页可以读取自动化标记（`navigator.webdriver=true`）。Firefox 严格指纹保护也可能影响网页显示、Canvas 和媒体功能。
+遇到 `Incorrect device time`，先在「电脑环境」查看系统时钟，打开系统日期与时间，启用自动设置时间并立即同步。修改时区不会校准时钟，也不要按代理国家手动增减电脑时间。电脑环境显示系统当前值，不采用导入的浏览器报告。若只有挂代理时无法完成验证，再分别检查代理连通性和浏览器设置；语言的 IP 匹配启用了自动化接口，可改为自定义语言后完全退出并重启副本。
+
+Chrome / Edge 使用真实的硬件指纹，没有提供任意 User Agent、Canvas / Audio 噪音或虚拟内存、核心数。选择语言「跟随 IP 匹配」时，浏览器通过原生自动化接口应用设置，网页可以读取自动化标记（`navigator.webdriver=true`）；自定义语言使用浏览器配置，不需要该接口。Firefox 严格指纹保护也可能影响网页显示、Canvas 和媒体功能。
 
 ## 终端
 

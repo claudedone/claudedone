@@ -64,6 +64,7 @@ const initial = (browser: BrowserId): Scan => ({
     { id: 'language', status: 'warning', value: 'zh-CN, zh, en-US', detail: '检测到中文语言偏好，专用环境可以单独切换为 English。', fixable: true },
     { id: 'timezone', status: 'warning', value: 'China Standard Time · UTC+8', detail: '可选调整为新加坡时区；这会影响系统内所有应用。', fixable: true },
     { id: 'offset', status: 'warning', value: 'UTC+8', detail: '新加坡和上海同为 UTC+8。可在时区面板中单独选择 UTC+0。', fixable: true },
+    {id:'clock',status:'unknown',value:'时间准确性尚未确认',detail:'演示模式不进行实际时间校验。时区正常不代表电脑时间准确。',fixable:false},
     { id: 'locale', status: 'manual', value: '需要在专用浏览器中实测', detail: '请打开本地复检页读取 Intl 默认 locale，再导入报告。', fixable: false },
     { id: 'cli', status: 'configured', value: '专用启动器已准备', detail: '启动器使用英文 locale 和新加坡进程时区，启动后仍需验证实际环境。', fixable: true },
     { id: 'fonts', status: 'manual', value: '发现 2 个中文字体文件', detail: '建议保留系统字体，可在浏览器中进一步确认字体检测结果。', fixable: false },

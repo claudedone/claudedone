@@ -90,7 +90,7 @@ jobs:
         run: node scripts/prepare-release.mjs
         env:
           RELEASE_TAG: ${{ github.ref_name }}
-      - name: Publish GitHub release
+      - name: Stage GitHub release for platform signing
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,7 +101,7 @@ jobs:
           if gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft > .release-is-draft; then
             test "$(cat .release-is-draft)" = true || { echo 'Release is already published; refusing to replace assets.'; exit 1; }
             gh release upload "$RELEASE_TAG" release-assets/* --clobber
-            gh release edit "$RELEASE_TAG" --notes-file .release-notes.md --draft=false
+            gh release edit "$RELEASE_TAG" --notes-file .release-notes.md --draft=true
           else
-            gh release create "$RELEASE_TAG" release-assets/* --verify-tag --title "NodeCloak $RELEASE_TAG" --notes-file .release-notes.md
+            gh release create "$RELEASE_TAG" release-assets/* --draft --verify-tag --title "NodeCloak $RELEASE_TAG" --notes-file .release-notes.md
           fi

@@ -405,6 +405,8 @@ pub struct ProxyTest {
     pub checked_at: String,
     pub connection: String,
     pub target: String,
+    #[serde(default)]
+    pub clock: Option<crate::engine::Check>,
 }
 pub async fn test(up: Upstream) -> Result<ProxyTest, String> {
     let mode = up.config.mode.clone();
@@ -440,20 +442,14 @@ async fn test_with_client(
     mode: String,
     started: std::time::Instant,
 ) -> Result<ProxyTest, String> {
-    let result = client
-        .get("https://www.cloudflare.com/cdn-cgi/trace")
-        .send()
+    let (text, clock) = crate::clock_probe::fetch(&client)
         .await
-        .map_err(|_| {
+        .map_err(|message| {
             relay
                 .as_ref()
                 .and_then(|r| r.failure.lock().ok().and_then(|v| v.clone()))
-                .unwrap_or_else(|| "代理连接或认证失败，请检查地址、密码及网络".into())
+                .unwrap_or(message)
         })?;
-    if !result.status().is_success() {
-        return Err("出口检测服务暂时不可用，请重试".into());
-    }
-    let text = result.text().await.map_err(|_| "无法读取出口检测结果")?;
     let value = |key: &str| {
         text.lines()
             .find_map(|line| line.strip_prefix(key))
@@ -464,10 +460,15 @@ async fn test_with_client(
         crate::claude_probe::probe(&client, "https://claude.ai"),
         crate::claude_probe::trace(&client, "https://claude.ai/cdn-cgi/trace")
     );
-    let target = format!("claude.ai {} · {}", page.label, route.unwrap_or_else(|| "同域名出口未取得，需在副本内复检".into()));
+    let target = format!(
+        "claude.ai {} · {}",
+        page.label,
+        route.unwrap_or_else(|| "同域名出口未取得，需在副本内复检".into())
+    );
     Ok(ProxyTest {
-        ip: value("ip="),
-        country: value("loc="),
+        ip: value("ip=").filter(|v| v.parse::<IpAddr>().is_ok()),
+        country: value("loc=")
+            .filter(|v| v.len() == 2 && v.bytes().all(|c| c.is_ascii_uppercase())),
         latency,
         checked_at: chrono::Utc::now().to_rfc3339(),
         connection: if mode == "system" {
@@ -476,12 +477,129 @@ async fn test_with_client(
             "列表 IP 来自通用 Cloudflare 检测，可能与 Claude 分流出口不同。此测试采用副本指定路径，仅覆盖 TCP HTTPS；HTTP/3（QUIC）需在副本内复检".into()
         },
         target,
+        clock: Some(clock),
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    #[ignore = "Starts a temporary Chrome profile through a local SOCKS5 test server; no account login"]
+    async fn real_socks_browser_preserves_native_clock_without_automation() {
+        use crate::{platform, profiles};
+        let root = tempfile::tempdir().unwrap();
+        struct Cleanup(std::path::PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = platform::close_profile(&self.0);
+            }
+        }
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let sender = Arc::new(Mutex::new(Some(tx)));
+        let server = tokio::spawn(async move {
+            loop {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let sender = sender.clone();
+                tokio::spawn(async move {
+                    let mut greeting = [0; 3];
+                    if socket.read_exact(&mut greeting).await.is_err() {
+                        return;
+                    }
+                    assert_eq!(greeting, [5, 1, 0]);
+                    socket.write_all(&[5, 0]).await.unwrap();
+                    let mut head = [0; 4];
+                    socket.read_exact(&mut head).await.unwrap();
+                    if head != [5, 1, 0, 3] {
+                        return;
+                    }
+                    let len = socket.read_u8().await.unwrap();
+                    let mut host = vec![0; len as usize];
+                    socket.read_exact(&mut host).await.unwrap();
+                    let destination_port = socket.read_u16().await.unwrap();
+                    if host != b"nodecloak-qa.invalid" || destination_port != 7777 {
+                        let _ = socket.write_all(&[5, 5, 0, 1, 0, 0, 0, 0, 0, 0]).await;
+                        return;
+                    }
+                    socket
+                        .write_all(&[5, 0, 0, 1, 127, 0, 0, 1, 0, 0])
+                        .await
+                        .unwrap();
+                    let request = String::from_utf8(header(&mut socket).await.unwrap()).unwrap();
+                    if request.starts_with("GET /probe?") {
+                        if let Some(tx) = sender.lock().unwrap().take() {
+                            let _ = tx.send(request.clone());
+                        }
+                    }
+                    let body = if request.starts_with("GET /session ") {
+                        "<!doctype html><title>NodeCloak SOCKS5 QA</title><p>Temporary network and clock check</p><script>fetch('/probe?now='+Date.now()+'&webdriver='+navigator.webdriver+'&offset='+new Date().getTimezoneOffset())</script>"
+                    } else {
+                        "ok"
+                    };
+                    let _ = socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await;
+                });
+            }
+        });
+        let mut preferences = profiles::Preferences::default();
+        preferences.startup_url = "http://nodecloak-qa.invalid:7777/session".into();
+        // Simulate an old saved source submitted by an older frontend.
+        preferences.regional.timezone_mode = "custom".into();
+        preferences.regional.timezone = "America/Los_Angeles".into();
+        let draft = profiles::Draft {
+            name: "SOCKS native clock QA".into(),
+            browser: "chrome".into(),
+            notes: String::new(),
+            tags: vec![],
+            proxy: ProxyConfig {
+                mode: "socks5".into(),
+                host: "127.0.0.1".into(),
+                port,
+                ..Default::default()
+            },
+            password: None,
+            clear_password: false,
+            preferences,
+        };
+        let profile = profiles::create(root.path(), draft, None).unwrap();
+        let _cleanup = Cleanup(profiles::path(root.path(), &profile).unwrap());
+        let runtime = Arc::new(profiles::Runtime::default());
+        let launch_root = root.path().to_owned();
+        let launch_id = profile.id.clone();
+        let launch_runtime = runtime.clone();
+        tokio::task::spawn_blocking(move || {
+            crate::profile_commands::launch(&launch_root, &launch_id, "startup", &launch_runtime)
+        })
+        .await
+        .unwrap()
+        .unwrap();
+        let request = tokio::time::timeout(Duration::from_secs(45), rx)
+            .await
+            .unwrap()
+            .unwrap();
+        let target = request
+            .lines()
+            .next()
+            .unwrap()
+            .split_whitespace()
+            .nth(1)
+            .unwrap();
+        let url = reqwest::Url::parse(&format!("http://nodecloak-qa.invalid{target}")).unwrap();
+        let query: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+        assert_eq!(query["webdriver"], "false");
+        assert_eq!(
+            query["offset"].parse::<i32>().unwrap(),
+            platform::offset_minutes().unwrap()
+        );
+        assert!(
+            (query["now"].parse::<i64>().unwrap() - chrono::Utc::now().timestamp_millis()).abs()
+                < 5000
+        );
+        assert!(!runtime.1.ready(&profile.id));
+        platform::close_profile(&profiles::path(root.path(), &profile).unwrap()).unwrap();
+        server.abort();
+    }
     #[tokio::test]
     async fn socks_uses_binary_addresses_for_literal_ipv4_and_ipv6_targets() {
         for host in ["127.0.0.1", "::1"] {

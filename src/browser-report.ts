@@ -44,7 +44,8 @@ export function offsetLabel(minutes: number) {
   const remainder = Math.abs(east) % 60;
   return `UTC${east >= 0 ? '+' : '-'}${hours}${remainder ? `:${String(remainder).padStart(2, '0')}` : ''}`;
 }
-export function withBrowserReport(scan: Scan | null, report: BrowserReport | null): Scan | null {
+export function withBrowserReport(scan: Scan | null, report: BrowserReport | null, scope: 'browser'|'computer' = 'browser'): Scan | null {
+  if(scope==='computer')return scan;
   if (!scan || !report || (report.browser && report.browser!==scan.browser)) return scan;
   const actual = (id: Check['id'], status: Check['status'], value: string, detail: string): Check => ({ id, status, value, detail: `本地复检页报告（用户导入）：${detail}`, fixable: ['timezone', 'offset'].includes(id) || ((['language','tracking'].includes(id) || (id === 'fonts' && scan.browser === 'firefox')) && scan.browserAvailable && scan.checks.find(c => c.id === id)?.fixable !== false) });
   const overrides: Partial<Record<Check['id'], Check>> = {

@@ -96,7 +96,7 @@ pub struct ProfileView {
     pub regional_ready: bool,
     pub regional_error: Option<String>,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Draft {
     pub name: String,
@@ -291,7 +291,7 @@ pub fn load(root: &Path) -> Result<Vec<Profile>, String> {
     {
         return Err("副本清单过大".into());
     }
-    let registry: Registry =
+    let mut registry: Registry =
         serde_json::from_slice(&std::fs::read(&file).map_err(|_| "无法读取副本清单")?)
             .map_err(|_| "副本清单损坏；未覆盖原数据，请恢复备份")?;
     if registry.schema != 1 {
@@ -306,6 +306,12 @@ pub fn load(root: &Path) -> Result<Vec<Profile>, String> {
             || (profile.legacy && profile.id != format!("legacy-{}", profile.browser))
         {
             return Err("副本清单包含无效或重复条目".into());
+        }
+    }
+    for profile in &mut registry.profiles {
+        if crate::regional::normalize_sources(&mut profile.preferences) {
+            profile.preferences_dirty = true;
+            profile.last_region = None;
         }
     }
     Ok(registry.profiles)
@@ -412,6 +418,9 @@ pub fn upstream(p: &Profile, active: bool) -> Result<Upstream, String> {
     })
 }
 pub fn draft_upstream(root: &Path, id: Option<&str>, draft: &Draft) -> Result<Upstream, String> {
+    let mut normalized = draft.clone();
+    crate::regional::normalize_sources(&mut normalized.preferences);
+    let draft = &normalized;
     validate(draft)?;
     let old = id.map(|id| get(root, id, false)).transpose()?;
     let password = match &draft.password {
@@ -477,7 +486,8 @@ fn validate(draft: &Draft) -> Result<(), String> {
     }
     draft.proxy.validate()
 }
-pub fn create(root: &Path, draft: Draft, copy_id: Option<&str>) -> Result<Profile, String> {
+pub fn create(root: &Path, mut draft: Draft, copy_id: Option<&str>) -> Result<Profile, String> {
+    crate::regional::normalize_sources(&mut draft.preferences);
     validate(&draft)?;
     let mut profiles = load(root)?;
     if profiles.len() >= 500 {
@@ -550,7 +560,8 @@ pub fn create(root: &Path, draft: Draft, copy_id: Option<&str>) -> Result<Profil
     pending.committed = true;
     Ok(p)
 }
-pub fn update(root: &Path, id: &str, draft: Draft) -> Result<Profile, String> {
+pub fn update(root: &Path, id: &str, mut draft: Draft) -> Result<Profile, String> {
+    crate::regional::normalize_sources(&mut draft.preferences);
     validate(&draft)?;
     let mut pending = PendingCredentials {
         id: id.into(),
@@ -1013,6 +1024,34 @@ pub fn history(root: &Path, id: Option<&str>) -> Result<Vec<engine::Record>, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn legacy_region_sources_are_disabled_on_load_without_changing_proxy_or_language() {
+        let root = test_dir();
+        let mut d = draft("Existing regional profile");
+        d.preferences.language = "de-DE,de,en".into();
+        let created = create(root.path(), d, None).unwrap();
+        let mut old = load(root.path()).unwrap();
+        let p = old.iter_mut().find(|p| p.id == created.id).unwrap();
+        p.preferences.regional.timezone_mode = "custom".into();
+        p.preferences.regional.timezone = "America/Los_Angeles".into();
+        p.preferences.regional.location_mode = "ip".into();
+        p.preferences.advanced.location = PermissionMode::Allow;
+        p.active_preferences = Some(p.preferences.clone());
+        p.preferences_dirty = false;
+        save(root.path(), &old).unwrap();
+        let migrated = get(root.path(), &created.id, false).unwrap();
+        assert_eq!(migrated.preferences.regional.timezone_mode, "system");
+        assert_eq!(migrated.preferences.regional.location_mode, "system");
+        assert!(migrated.preferences.advanced.location == PermissionMode::Ask);
+        assert_eq!(migrated.preferences.language, "de-DE,de,en");
+        assert_eq!(migrated.proxy, created.proxy);
+        assert!(migrated.preferences_dirty);
+        assert!(!crate::regional::needs_control(&migrated.preferences));
+        assert_eq!(
+            migrated.active_preferences.unwrap().regional.timezone_mode,
+            "custom"
+        );
+    }
     #[test]
     fn old_preferences_receive_safe_advanced_defaults() {
         let prefs: Preferences = serde_json::from_value(serde_json::json!({

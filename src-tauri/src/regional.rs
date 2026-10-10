@@ -55,7 +55,19 @@ pub fn needs_control(p: &Preferences) -> bool {
     p.regional.language_mode == "ip"
         || p.regional.timezone_mode != "system"
         || p.regional.location_mode != "system"
-        || p.advanced.location == PermissionMode::Allow
+}
+/// Compatibility for saved settings from before per-profile sources were removed.
+pub fn normalize_sources(p: &mut Preferences) -> bool {
+    let before = p.clone();
+    if p.regional.location_mode != "system" && p.advanced.location == PermissionMode::Allow {
+        p.advanced.location = PermissionMode::Ask;
+    }
+    let language_mode = p.regional.language_mode.clone();
+    p.regional = RegionalSettings {
+        language_mode,
+        ..RegionalSettings::default()
+    };
+    *p != before
 }
 pub fn uses_ip(p: &Preferences) -> bool {
     p.regional.language_mode == "ip"
@@ -87,9 +99,6 @@ pub fn validate(p: &Preferences) -> Result<(), String> {
     }
     if needs_control(p) && p.advanced.resist_fingerprinting {
         return Err("独立区域设置与 Firefox 严格指纹保护冲突，请关闭严格保护".into());
-    }
-    if p.advanced.location == PermissionMode::Allow && r.location_mode == "system" {
-        return Err("允许定位时请先选择跟随 IP 或自定义位置".into());
     }
     if [
         &p.advanced.notifications,

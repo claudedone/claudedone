@@ -3,6 +3,12 @@ import { offsetLabel, parseBrowserReport, withBrowserReport } from './browser-re
 import type { Scan } from './domain';
 const report = () => ({schemaVersion:1,capturedAt:new Date().toISOString(),timezone:'Asia/Shanghai',offsetMinutes:-480,languages:['en-US','en'],locale:'en-US',fonts:['Microsoft YaHei','SimSun'],platform:'Windows'});
 describe('actual browser report', () => {
+  it('keeps computer timezone and offset separate from imported browser values', () => {
+    const scan = {browserAvailable:true,checks:[{id:'timezone',status:'healthy',value:'UTC',detail:'System timezone',fixable:true},{id:'offset',status:'healthy',value:'UTC+0',detail:'System offset',fixable:true}]} as Scan;
+    const computer = withBrowserReport(scan, parseBrowserReport(JSON.stringify(report())), 'computer')!;
+    expect(computer.checks.map(c => c.value)).toEqual(['UTC','UTC+0']);
+    expect(withBrowserReport(scan, parseBrowserReport(JSON.stringify(report())))!.checks.map(c => c.value)).toEqual(['Asia/Shanghai','UTC+8']);
+  });
   it('keeps timezone, language, locale, fonts, and UA inference separate', () => {
     const r = parseBrowserReport(JSON.stringify(report()));
     const scan = {browserAvailable:true,checks:['timezone','offset','language','locale','fonts','emoji'].map(id => ({id,status:'unknown',value:'pending',detail:'',fixable:false}))} as Scan;

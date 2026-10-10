@@ -8,7 +8,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Check {
     pub id: String,
@@ -222,8 +222,9 @@ pub fn scan_local(root: &Path, browser: &str) -> Result<Scan, String> {
         check("webrtc", if rtc { "configured" } else { "warning" }, if rtc { "已限制非代理 UDP" } else { "尚未设置隐私策略" }, "读取专用配置中的 WebRTC 策略，配置后仍需网页实测。此设置可能影响网页语音或视频通话。", available),
         check("dns", if dns { "configured" } else { "warning" }, if dns { "Cloudflare · 加密 DNS" } else { "未配置加密 DNS" }, "将专用浏览器设置为严格 DNS over HTTPS。企业策略或代理可能覆盖设置；不等同于已完成 DNS 泄露实测。", available),
         check("language", if language_ok { "configured" } else { "warning" }, language.unwrap_or("跟随浏览器默认设置"), if forced_chinese { "配置文件包含强制中文语言，普通偏好无法覆盖。系统或企业策略还需在浏览器 policy 页面确认。" } else { "同时核验 selected_languages 与 accept_languages。若网页仍显示中文，请确认使用专用窗口、完全退出后重启，并检查策略或扩展。" }, available && !forced_chinese),
-        check("timezone", if zone.is_err() { "unknown" } else if zone_problem { "warning" } else { "healthy" }, zone.unwrap_or_else(|_| "读取失败".into()), "可选新加坡（UTC+8）、UTC（UTC+0）或系统支持的自定义时区。新加坡不会消除网站对 UTC+8 的计分；UTC 将相对北京时间的钟面数值提前 8 小时。影响整个系统，可从记录恢复。", cfg!(any(target_os = "windows", target_os = "macos"))),
+        check("timezone", if zone.is_err() { "unknown" } else if zone_problem { "warning" } else { "healthy" }, zone.unwrap_or_else(|_| "读取失败".into()), "读取系统时区标识。修改时区只改变本地时间显示，不会校准电脑时钟；时间准确性请查看独立的系统时钟检测。修改会影响所有应用，可从记录恢复。", cfg!(any(target_os = "windows", target_os = "macos"))),
         check("offset", if offset.is_err() { "unknown" } else if offset == Ok(-480) { "warning" } else { "healthy" }, offset.map(offset_label).unwrap_or_else(|_| "读取失败".into()), "这是本机系统偏移，不是网页实测。新加坡和上海同为 UTC+8，站点仍可能计分；可从时区面板选择 UTC+0。", cfg!(any(target_os = "windows", target_os = "macos"))),
+        crate::clock_probe::unknown(),
         check("locale", "manual", "需要在专用浏览器中实测", "Intl 区域设置与首选语言不是同一个值。请打开本地复检页并导入报告；不能凭配置文件判定此项已通过。", false),
         check("cli", if cli_ready { "configured" } else if cli_installed { "warning" } else { "manual" }, if cli_ready { "专用启动器已准备" } else if cli_installed { "已安装 · 尚未准备启动器" } else { "未找到 Claude Code" }, "专用启动器设置 TZ=Asia/Singapore 与英文 locale。仅影响由启动器启动的进程；继承原有网络和 API 配置。", cli_installed),
         check("fonts", "manual", if fonts.is_empty() { "常见系统目录未发现匹配".into() } else { format!("系统目录发现 {} 个中文字体文件", fonts.len()) }, "可打开字体管理，主动选择可卸载的用户字体；系统字体与字体组件保留。此目录检查不是完整安装列表，也不能证明网页检测已通过。", false),
@@ -337,31 +338,31 @@ pub async fn scan_network(mut scan: Scan) -> Scan {
         crate::claude_probe::trace(&client, "https://claude.ai/cdn-cgi/trace")
     );
     let ok = a.reachable && b.reachable;
-    let label = format!("claude.ai {} · claude.com {} · {}", a.label, b.label, route.unwrap_or_else(|| "Claude 同域名出口未取得，需浏览器复检".into()));
+    let label = format!(
+        "claude.ai {} · claude.com {} · {}",
+        a.label,
+        b.label,
+        route.unwrap_or_else(|| "Claude 同域名出口未取得，需浏览器复检".into())
+    );
     scan.latency = if ok {
         Some(start.elapsed().as_millis())
     } else {
         None
     };
     scan.checks[0] = check("connection", if ok { "healthy" } else { "manual" }, label, "本机 TCP HTTPS 页面检查（含 VPN / TUN，不读取浏览器代理）；地区不可用页面和验证挑战不会计为正常。通用 Cloudflare 出口不等于 Claude 分流出口。HTTP/3（QUIC）分流和账号可用性需在浏览器确认。", false);
-    if let Ok(response) = client
-        .get("https://www.cloudflare.com/cdn-cgi/trace")
-        .send()
-        .await
-    {
-        if response.status().is_success() {
-            if let Ok(body) = response.text().await {
-                for line in body.lines() {
-                    if let Some(ip) = line.strip_prefix("ip=") {
-                        if ip.parse::<std::net::IpAddr>().is_ok() {
-                            scan.ip = Some(ip.into());
-                        }
-                    }
-                    if let Some(loc) = line.strip_prefix("loc=") {
-                        if loc.len() == 2 && loc.chars().all(|c| c.is_ascii_uppercase()) {
-                            scan.location = Some(loc.into());
-                        }
-                    }
+    if let Ok((body, clock)) = crate::clock_probe::fetch(&client).await {
+        if let Some(c) = scan.checks.iter_mut().find(|c| c.id == "clock") {
+            *c = clock;
+        }
+        for line in body.lines() {
+            if let Some(ip) = line.strip_prefix("ip=") {
+                if ip.parse::<std::net::IpAddr>().is_ok() {
+                    scan.ip = Some(ip.into());
+                }
+            }
+            if let Some(loc) = line.strip_prefix("loc=") {
+                if loc.len() == 2 && loc.chars().all(|c| c.is_ascii_uppercase()) {
+                    scan.location = Some(loc.into());
                 }
             }
         }
@@ -906,6 +907,25 @@ pub fn launch_cli(root: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn timezone_detection_does_not_claim_the_clock_is_synchronized() {
+        let root = tempfile::tempdir().unwrap();
+        let scan = scan_local(root.path(), "chrome").unwrap();
+        let clock = scan
+            .checks
+            .iter()
+            .find(|c| c.id == "clock")
+            .expect("Clock accuracy needs its own check");
+        assert_eq!(clock.status, "unknown");
+        assert!(!clock.fixable);
+        assert!(scan
+            .checks
+            .iter()
+            .find(|c| c.id == "timezone")
+            .unwrap()
+            .detail
+            .contains("不会校准"));
+    }
     #[test]
     fn firefox_font_restriction_requires_own_consent_without_modifying_files() {
         let dir = tempfile::tempdir().unwrap();

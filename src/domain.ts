@@ -1,6 +1,6 @@
 import {getDateLocale} from './i18n';
 export type BrowserId = 'chrome' | 'edge' | 'firefox';
-export type CheckId = 'connection' | 'route' | 'webrtc' | 'dns' | 'language' | 'timezone' | 'offset' | 'locale' | 'cli' | 'fonts' | 'emoji' | 'webgl' | 'screen' | 'networkInfo' | 'plugins' | 'tracking';
+export type CheckId = 'connection' | 'route' | 'webrtc' | 'dns' | 'language' | 'timezone' | 'offset' | 'clock' | 'locale' | 'cli' | 'fonts' | 'emoji' | 'webgl' | 'screen' | 'networkInfo' | 'plugins' | 'tracking';
 export type TimezoneTarget = 'singapore' | 'utc' | 'custom';
 export interface TimezoneOption { id: string; label: string; offsetMinutes: number }
 export function timezoneOffsetLabel(offsetMinutes: number): string {
@@ -13,7 +13,7 @@ export const timezoneChoices: Record<TimezoneTarget, { label: string; consequenc
   utc: { label: '协调世界时 · UTC+0', consequence: '相对北京时间，系统显示时间提前 8 小时。所有应用的本地时间显示会受到影响；不会改变真实时间戳。' },
   custom: { label: '自定义时区', consequence: '选择系统支持的时区。系统显示时间及所有应用的本地时间会随之变化；不会改变真实时间戳。' },
 };
-export const checkCount = 16;
+export const checkCount = 17;
 export type CheckStatus = 'healthy' | 'configured' | 'warning' | 'manual' | 'unknown';
 export interface Check { id: CheckId; status: CheckStatus; value: string; detail: string; fixable: boolean }
 export interface Scan {
@@ -31,6 +31,7 @@ export const labels: Record<CheckStatus, string> = {
   healthy: '检测正常', configured: '已配置 · 待复检', warning: '建议调整', manual: '需手动确认', unknown: '尚未确认',
 };
 export const definitions: Record<CheckId, { title: string; description: string; group: 'network' | 'privacy' | 'device'; target?: string; advice: string[] }> = {
+  clock: {title:'系统时钟',description:'单独检查实际时间，不用时区判断准确性',group:'device',advice:['打开系统日期与时间，启用自动设置时间并立即同步，再重新检测。','修改时区只影响本地时间显示，不会校准电脑时钟；不要根据代理地区手动增减电脑时间。','此检测使用 HTTPS 服务端时间，容许网络延迟和 2 分钟偏差。检测失败表示尚未确认，不代表时钟正常。','若时间同步后网页仍提示 Incorrect device time，请改用自定义浏览器语言、关闭严格指纹保护后重启副本，再分别检查代理连接和浏览器验证结果。']},
   webgl: {title:'WebGL 渲染器',description:'读取浏览器暴露的图形设备特征',group:'device',advice:['ANGLE、Direct3D11、NVIDIA 是 Windows 图形栈的常见组合，不代表国家或账号异常。','本地复检使用 WebGL 扩展读取渲染器；不支持或禁止时明确记录为不可用。','保留硬件加速，不替换渲染器字符串。']},
   screen: {title:'屏幕与缩放',description:'确认网页可见尺寸和像素比例',group:'device',advice:['2560×1440 和 1.5 倍像素比例是常见显示配置。网页像素比例还可能受到浏览器缩放影响。','不修改分辨率或缩放来消除第三方网站的设备特征计分。']},
   networkInfo: {title:'浏览器网络估计',description:'区分网络质量估计与真实网络出口',group:'network',advice:['effectiveType=4g 是浏览器根据连接性能划分的等级，并不表示使用了 4G 蜂窝网络。','downlink 是浏览器估计值，不是测速或出口国家证据。部分浏览器不提供此 API。','实际 Claude 出口仍需要专用浏览器网络实测。']},

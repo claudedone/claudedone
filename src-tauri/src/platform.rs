@@ -458,7 +458,19 @@ pub fn open_timezone_settings() -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         return Ok(());
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    {
+        // The same Date & Time link used by the Apple macOS user guide.
+        let status = command("open")
+            .arg("x-apple.systempreferences:com.apple.Date-Time-Settings.extension")
+            .status()
+            .map_err(|_| "请在系统设置中打开日期与时间。")?;
+        if !status.success() {
+            return Err("请在系统设置中打开日期与时间。".into());
+        }
+        return Ok(());
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     Err("请在系统设置中打开日期与时间。".into())
 }
 

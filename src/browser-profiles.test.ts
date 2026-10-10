@@ -48,29 +48,34 @@ describe('browser profiles',()=>{
     expect(api.validateDraft({...d,browser:'chrome'})).toContain('Firefox');
     expect(api.validateDraft({...d,preferences:{...d.preferences,advanced:{...d.preferences.advanced,notifications:'allow' as never}}})).toBeTruthy();
   });
-  it('validates custom locations, timezones and strict-mode conflicts',async()=>{
-    const api=await import('./browser-profiles');const d=api.defaults();d.name='region';
-    d.preferences.regional.timezoneMode='custom';d.preferences.regional.timezone='America/Los_Angeles';
-    d.preferences.regional.locationMode='custom';d.preferences.advanced.location='allow';
-    expect(api.validateDraft(d)).toBeNull();expect(api.needsRegionalControl(d.preferences)).toBe(true);
-    d.preferences.regional.latitude=91;expect(api.validateDraft(d)).toContain('经纬度');
-    d.preferences.regional.latitude=NaN;expect(api.validateDraft(d)).toContain('经纬度');
-    d.preferences.regional.latitude=35.68;d.preferences.regional.timezone='Invalid/Zone';expect(api.validateDraft(d)).toContain('时区');
-    d.preferences.regional.timezone='Asia/Tokyo';d.preferences.advanced.resistFingerprinting=true;expect(api.validateDraft(d)).toContain('冲突');
-    d.preferences.advanced.resistFingerprinting=false;d.preferences.regional.locationMode='system';expect(api.validateDraft(d)).toContain('允许定位');
+  it('removes legacy timezone and coordinate sources when loading saved profiles',async()=>{
+    const api=await import('./browser-profiles');const d=api.defaults();d.name='existing';
+    Object.assign(d.preferences.regional,{timezoneMode:'custom',timezone:'America/Los_Angeles',locationMode:'ip',latitude:35.68,longitude:139.69});
+    d.preferences.advanced.location='allow';d.proxy.mode='direct';
+    storage.set('claudedone.profiles-demo.v1',JSON.stringify([{...d,id:'legacy-firefox',running:false}]));
+    const [p]=await api.listProfiles();
+    expect(p.preferences.regional.timezoneMode).toBe('system');
+    expect(p.preferences.regional.locationMode).toBe('system');
+    expect(p.preferences.advanced.location).toBe('ask');
+    expect(p.preferences.language).toBe('en-US,en');expect(p.proxy.mode).toBe('direct');
+    expect(api.needsRegionalControl(p.preferences)).toBe(false);
   });
-  it('stores independent regional settings and defers updates while running',async()=>{
-    const api=await import('./browser-profiles');const d=api.defaults();d.name='IP matched';
-    Object.assign(d.preferences.regional,{languageMode:'ip',timezoneMode:'ip',locationMode:'ip'});
+  it('supports native location permission without requiring an emulated position',async()=>{
+    const api=await import('./browser-profiles');const d=api.defaults();d.name='native permissions';
     d.preferences.advanced.location='allow';
+    expect(api.validateDraft(d)).toBeNull();expect(api.needsRegionalControl(d.preferences)).toBe(false);
+    d.preferences.advanced.resistFingerprinting=true;expect(api.validateDraft(d)).toBeNull();
+  });
+  it('keeps IP language matching independent and defers running language edits',async()=>{
+    const api=await import('./browser-profiles');const d=api.defaults();d.name='IP language';
+    Object.assign(d.preferences.regional,{languageMode:'ip',timezoneMode:'ip',locationMode:'ip'});
     const first=await api.saveProfile(d);const copy=await api.saveProfile({...d,name:'copy'},undefined,first.id);
-    await api.startProfile(first.id);Object.assign(d.preferences.regional,{timezoneMode:'custom',timezone:'Europe/Berlin',locationMode:'custom',latitude:52.52,longitude:13.405});
+    expect(first.preferences.regional.timezoneMode).toBe('system');expect(first.preferences.regional.locationMode).toBe('system');
+    await api.startProfile(first.id);d.preferences.regional.languageMode='custom';d.preferences.language='de-DE,de,en';
     await api.saveProfile(d,first.id);const profiles=await api.listProfiles();
     expect(profiles.find(p=>p.id===first.id)?.pendingRestart).toBe(true);
-    expect(profiles.find(p=>p.id===copy.id)?.preferences.regional.timezoneMode).toBe('ip');
-    const normalized=api.normalizePreferences(d.preferences);normalized.regional.latitude=0;
-    expect(d.preferences.regional.latitude).toBe(52.52);
-    const match=await api.matchRegion(d);expect(match.timezone).toBe('Asia/Singapore');expect(match.language).toBe('en-SG,en');
+    expect(profiles.find(p=>p.id===copy.id)?.preferences.regional.languageMode).toBe('ip');
+    expect((await api.matchRegion(d)).language).toBe('en-SG,en');
   });
 
 });

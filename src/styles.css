@@ -133,3 +133,6 @@ select:is(:focus,:focus-visible),textarea:is(:focus,:focus-visible){outline:0;bo
 .profile-search:focus-within{border-color:var(--green)}
 .profile-search input:is(:focus,:focus-visible){outline:0;border:0;box-shadow:none}
 .pending-toggle input:focus-visible+.switch,.repair-option input:focus-visible+.custom-checkbox{outline:0;border:1px solid var(--green)}
+
+/* Keep actual values visible on narrow desktop windows. */
+@media(max-width:940px){:root .check-row{grid-template-columns:minmax(0,1fr) auto auto;row-gap:8px;padding:12px 18px}.check-row>.check-name{grid-column:1;grid-row:1;min-width:0;padding:0}:root .check-row>.check-name>span:last-child{min-width:0}:root .check-row>.check-name small{white-space:normal;overflow-wrap:anywhere}.check-row>.check-value{display:block;grid-column:1 / -1;grid-row:2;white-space:normal;overflow-wrap:anywhere;padding-left:48px}.check-row>.status{grid-column:2;grid-row:1}.check-row>.row-action,.check-row>.row-detail{grid-column:3;grid-row:1}}

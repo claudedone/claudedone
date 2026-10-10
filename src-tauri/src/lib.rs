@@ -1,5 +1,6 @@
 mod browser_control;
 mod claude_probe;
+mod clock_probe;
 mod data_root;
 mod engine;
 mod firefox;
@@ -75,6 +76,11 @@ async fn scan_environment(
         let result = proxy::test(upstream).await;
         match result {
             Ok(test) => {
+                if let Some(clock) = test.clock {
+                    if let Some(c) = local.checks.iter_mut().find(|c| c.id == "clock") {
+                        *c = clock;
+                    }
+                }
                 local.ip = test.ip;
                 local.location = test.country;
                 local.latency = Some(test.latency);
