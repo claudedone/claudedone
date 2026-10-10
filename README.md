@@ -165,9 +165,11 @@ Windows 上生成 NSIS 安装包和可执行文件；macOS 上生成应用与 DM
 
 1. 同步 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 的版本，并更新 `scripts/prepare-release.mjs` 中的发布说明。
 2. 执行 `node scripts/check-release-version.mjs`、`node --test scripts/release-checks.mjs` 和上述代码检查。
-3. 提交代码，创建并推送与版本一致的 `v<版本>` 标签。三个平台全部构建成功后，GitHub Actions 才发布 Release；已公开的 Release 不会被覆盖。
+3. 提交代码，创建并推送与版本一致的 `v<版本>` 标签。三个平台全部构建成功后，GitHub Actions 保存 Release 草稿；完成平台签名和验证后手动公开，已公开的 Release 不会被覆盖。
 
 Release 包含 Windows 安装版、便携版、两种 macOS DMG、签名更新文件、`latest.json`、`SHA256SUMS.txt` 和第三方许可归档。主分支、PR 和手动运行只生成构建产物，不发布 Release；官网需单独同步和部署。
+
+Windows 先签应用程序，再生成安装包并签安装包；更改安装包后必须重新生成 Tauri 更新签名。macOS 应用与 DMG 完成 Developer ID 签名和 Apple 公证后，再从最终应用生成更新归档及签名。未完成公证的新版不替换官网已公证的下载包。
 
 签名私钥放在仓库 Actions Secret `TAURI_SIGNING_PRIVATE_KEY`，公钥配置在 `src-tauri/tauri.conf.json`。Tauri 更新签名用于校验更新文件，不是 Windows Authenticode 签名或 Apple 公证。
 
