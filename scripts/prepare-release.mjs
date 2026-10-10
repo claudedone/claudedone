@@ -20,10 +20,7 @@ for(const [platform,name] of Object.entries(names)) {
 }
 // Update notices list only implemented features and bug fixes.
 const releaseNotes=[
-  "移除高级设置中的副本时区和地理位置来源，浏览器使用系统时区。 / Removed per-profile timezone and location-source settings; browsers use the system timezone.",
-  "新增系统时间检查，可打开系统时间设置。 / Added system clock diagnostics and a shortcut to system time settings.",
-  "修复电脑环境显示旧时区、窄窗口隐藏时区和 UTC 偏移的问题。 / Fixed stale computer timezone values and hidden timezone details in narrow windows.",
-  "自定义语言且无需模拟定位时，避免启用不必要的浏览器自动化。 / Avoided unnecessary browser automation when using custom language without location emulation."
+  "修复 UTC+8 被误报为建议调整的问题；UTC 偏移改为只读信息，不再引导修改系统时区。 / Fixed UTC+8 being incorrectly flagged for adjustment; the UTC offset is now read-only and no longer prompts a system timezone change."
 ];
 const manifest={version,notes:releaseNotes.map(note=>`- ${note}`).join('\n'),pub_date:new Date().toISOString(),platforms};
 fs.writeFileSync(path.join(directory,'latest.json'),JSON.stringify(manifest,null,2)+'\n');

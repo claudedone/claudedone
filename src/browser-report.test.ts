@@ -19,10 +19,12 @@ describe('actual browser report', () => {
     expect(result.checks.find(c => c.id === 'fonts')?.fixable).toBe(false);
     expect(result.checks.find(c => c.id === 'emoji')?.value).toContain('UA 推断');
   });
-  it('does not treat Singapore as a change to UTC+8', () => {
-    const r = parseBrowserReport(JSON.stringify({...report(),timezone:'Asia/Singapore'}));
+  it.each([-480, -330, 0, 210])('shows offset %i as read-only information rather than a repair recommendation', offsetMinutes => {
+    const r = parseBrowserReport(JSON.stringify({...report(),timezone:'Asia/Singapore',offsetMinutes}));
     const scan = {checks:[{id:'timezone'},{id:'offset'}]} as Scan;
-    expect(withBrowserReport(scan,r)?.checks.map(c => c.status)).toEqual(['healthy','warning']);
+    const result = withBrowserReport(scan,r)!;
+    expect(result.checks.map(c => c.status)).toEqual(['healthy','healthy']);
+    expect(result.checks.find(c => c.id === 'offset')?.fixable).toBe(false);
   });
   it('rejects malformed, excessive, or unsupported reports', () => {
     for(const text of ['invalid','null',JSON.stringify({...report(),offsetMinutes:2000}),JSON.stringify({...report(),timezone:'invalid'}),JSON.stringify({...report(),languages:[]}),JSON.stringify({...report(),schemaVersion:2}),JSON.stringify({...report(),fonts:Array(65).fill('font')})]) expect(() => parseBrowserReport(text)).toThrow();

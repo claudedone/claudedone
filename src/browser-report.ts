@@ -47,10 +47,10 @@ export function offsetLabel(minutes: number) {
 export function withBrowserReport(scan: Scan | null, report: BrowserReport | null, scope: 'browser'|'computer' = 'browser'): Scan | null {
   if(scope==='computer')return scan;
   if (!scan || !report || (report.browser && report.browser!==scan.browser)) return scan;
-  const actual = (id: Check['id'], status: Check['status'], value: string, detail: string): Check => ({ id, status, value, detail: `本地复检页报告（用户导入）：${detail}`, fixable: ['timezone', 'offset'].includes(id) || ((['language','tracking'].includes(id) || (id === 'fonts' && scan.browser === 'firefox')) && scan.browserAvailable && scan.checks.find(c => c.id === id)?.fixable !== false) });
+  const actual = (id: Check['id'], status: Check['status'], value: string, detail: string): Check => ({ id, status, value, detail: `本地复检页报告（用户导入）：${detail}`, fixable: id === 'timezone' || ((['language','tracking'].includes(id) || (id === 'fonts' && scan.browser === 'firefox')) && scan.browserAvailable && scan.checks.find(c => c.id === id)?.fixable !== false) });
   const overrides: Partial<Record<Check['id'], Check>> = {
     timezone: actual('timezone', ['Asia/Shanghai', 'Asia/Urumqi'].includes(report.timezone) ? 'warning' : 'healthy', report.timezone, '这是报告采集时网页读取的时区。配置或系统发生变化后需重新采集。'),
-    offset: actual('offset', report.offsetMinutes === -480 ? 'warning' : 'healthy', offsetLabel(report.offsetMinutes), '网页 Date.getTimezoneOffset() 的采集结果；UTC+8 会被截图中的网站单独计分。'),
+    offset: actual('offset', 'healthy', offsetLabel(report.offsetMinutes), '网页 Date.getTimezoneOffset() 的采集结果，仅作信息展示；UTC+8 本身不是异常，也不表示时钟不准确。'),
     language: actual('language', report.languages.some(s => /^zh(?:-|$)/i.test(s)) ? 'warning' : 'healthy', report.languages.join(', '), '实际 navigator.languages 列表。'),
     locale: actual('locale', /^zh(?:-|$)/i.test(report.locale) ? 'manual' : 'healthy', report.locale, '实际 Intl.DateTimeFormat().resolvedOptions().locale。'),
     fonts: actual('fonts', 'manual', report.fonts.length ? report.fonts.join(', ') : '候选字体宽度探测未命中', 'Canvas 宽度差异探测存在误判可能；未命中也不能证明系统没有中文字体。'),

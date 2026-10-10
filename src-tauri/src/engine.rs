@@ -223,7 +223,7 @@ pub fn scan_local(root: &Path, browser: &str) -> Result<Scan, String> {
         check("dns", if dns { "configured" } else { "warning" }, if dns { "Cloudflare · 加密 DNS" } else { "未配置加密 DNS" }, "将专用浏览器设置为严格 DNS over HTTPS。企业策略或代理可能覆盖设置；不等同于已完成 DNS 泄露实测。", available),
         check("language", if language_ok { "configured" } else { "warning" }, language.unwrap_or("跟随浏览器默认设置"), if forced_chinese { "配置文件包含强制中文语言，普通偏好无法覆盖。系统或企业策略还需在浏览器 policy 页面确认。" } else { "同时核验 selected_languages 与 accept_languages。若网页仍显示中文，请确认使用专用窗口、完全退出后重启，并检查策略或扩展。" }, available && !forced_chinese),
         check("timezone", if zone.is_err() { "unknown" } else if zone_problem { "warning" } else { "healthy" }, zone.unwrap_or_else(|_| "读取失败".into()), "读取系统时区标识。修改时区只改变本地时间显示，不会校准电脑时钟；时间准确性请查看独立的系统时钟检测。修改会影响所有应用，可从记录恢复。", cfg!(any(target_os = "windows", target_os = "macos"))),
-        check("offset", if offset.is_err() { "unknown" } else if offset == Ok(-480) { "warning" } else { "healthy" }, offset.map(offset_label).unwrap_or_else(|_| "读取失败".into()), "这是本机系统偏移，不是网页实测。新加坡和上海同为 UTC+8，站点仍可能计分；可从时区面板选择 UTC+0。", cfg!(any(target_os = "windows", target_os = "macos"))),
+        check("offset", if offset.is_err() { "unknown" } else { "healthy" }, offset.map(offset_label).unwrap_or_else(|_| "读取失败".into()), "这是本机系统时区对应的 UTC 偏移。UTC+8 本身不是异常，也不能判断时钟是否准确；请查看系统时钟检测。", false),
         crate::clock_probe::unknown(),
         check("locale", "manual", "需要在专用浏览器中实测", "Intl 区域设置与首选语言不是同一个值。请打开本地复检页并导入报告；不能凭配置文件判定此项已通过。", false),
         check("cli", if cli_ready { "configured" } else if cli_installed { "warning" } else { "manual" }, if cli_ready { "专用启动器已准备" } else if cli_installed { "已安装 · 尚未准备启动器" } else { "未找到 Claude Code" }, "专用启动器设置 TZ=Asia/Singapore 与英文 locale。仅影响由启动器启动的进程；继承原有网络和 API 配置。", cli_installed),
@@ -907,6 +907,14 @@ pub fn launch_cli(root: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn system_offset_is_read_only_and_not_a_repair_recommendation() {
+        let root = tempfile::tempdir().unwrap();
+        let scan = scan_local(root.path(), "chrome").unwrap();
+        let offset = scan.checks.iter().find(|c| c.id == "offset").unwrap();
+        assert!(!offset.fixable, "An offset is derived from the system timezone");
+        assert!(matches!(offset.status.as_str(), "healthy" | "unknown"));
+    }
     #[test]
     fn timezone_detection_does_not_claim_the_clock_is_synchronized() {
         let root = tempfile::tempdir().unwrap();

@@ -904,5 +904,10 @@
   "修改时区只影响本地时间显示，不会校准电脑时钟；不要根据代理地区手动增减电脑时间。": "Timezone changes only affect local time display. They do not sync the clock. Do not manually add or subtract hours based on the proxy location.",
   "此检测使用 HTTPS 服务端时间，容许网络延迟和 2 分钟偏差。检测失败表示尚未确认，不代表时钟正常。": "This check uses a server timestamp over HTTPS and tolerates network delays and a 2-minute difference. A failed check means accuracy is unconfirmed.",
   "若时间同步后网页仍提示 Incorrect device time，请改用自定义浏览器语言、关闭严格指纹保护后重启副本，再分别检查代理连接和浏览器验证结果。": "If Incorrect device time persists after syncing, use a custom browser language, disable strict fingerprint protection and restart the profile. Check the proxy connection and browser verification separately.",
-  "读取系统时区标识。修改时区只改变本地时间显示，不会校准电脑时钟；时间准确性请查看独立的系统时钟检测。修改会影响所有应用，可从记录恢复。": "Reads the system timezone identifier. Changing timezone affects local time display but does not sync the clock. See the separate system clock check for accuracy. Changes affect all applications and can be restored from history."
+  "读取系统时区标识。修改时区只改变本地时间显示，不会校准电脑时钟；时间准确性请查看独立的系统时钟检测。修改会影响所有应用，可从记录恢复。": "Reads the system timezone identifier. Changing timezone affects local time display but does not sync the clock. See the separate system clock check for accuracy. Changes affect all applications and can be restored from history.",
+  "这是本机系统时区对应的 UTC 偏移。UTC+8 本身不是异常，也不能判断时钟是否准确；请查看系统时钟检测。": "This is the UTC offset for the computer's timezone. UTC+8 is not an error and does not determine clock accuracy; see the system clock check.",
+  "网页 Date.getTimezoneOffset() 的采集结果，仅作信息展示；UTC+8 本身不是异常，也不表示时钟不准确。": "Observed Date.getTimezoneOffset() value, shown for information only. UTC+8 is not an error and does not mean the clock is inaccurate.",
+  "UTC 偏移由所选时区和夏令时规则决定，仅作信息展示，没有单独的修复设置。": "The UTC offset follows the selected timezone and daylight saving rules. It is informational and has no separate repair setting.",
+  "新加坡和上海同为 UTC+8，这是正常时区偏移，不需要为了消除提示改为 UTC。": "Singapore and Shanghai both use UTC+8. This is a normal offset; there is no need to switch to UTC to clear a warning.",
+  "时间是否准确请查看系统时钟检测；修改时区不会校准电脑时间。": "See the system clock check for time accuracy. Changing the timezone does not synchronize the clock."
 }

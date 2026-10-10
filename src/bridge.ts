@@ -63,7 +63,7 @@ const initial = (browser: BrowserId): Scan => ({
     { id: 'dns', status: 'warning', value: '未配置加密 DNS', detail: '将专用浏览器设置为严格 DNS over HTTPS，保护域名查询。', fixable: true },
     { id: 'language', status: 'warning', value: 'zh-CN, zh, en-US', detail: '检测到中文语言偏好，专用环境可以单独切换为 English。', fixable: true },
     { id: 'timezone', status: 'warning', value: 'China Standard Time · UTC+8', detail: '可选调整为新加坡时区；这会影响系统内所有应用。', fixable: true },
-    { id: 'offset', status: 'warning', value: 'UTC+8', detail: '新加坡和上海同为 UTC+8。可在时区面板中单独选择 UTC+0。', fixable: true },
+    { id: 'offset', status: 'healthy', value: 'UTC+8', detail: '这是本机系统时区对应的 UTC 偏移。UTC+8 本身不是异常，也不能判断时钟是否准确；请查看系统时钟检测。', fixable: false },
     {id:'clock',status:'unknown',value:'时间准确性尚未确认',detail:'演示模式不进行实际时间校验。时区正常不代表电脑时间准确。',fixable:false},
     { id: 'locale', status: 'manual', value: '需要在专用浏览器中实测', detail: '请打开本地复检页读取 Intl 默认 locale，再导入报告。', fixable: false },
     { id: 'cli', status: 'configured', value: '专用启动器已准备', detail: '启动器使用英文 locale 和新加坡进程时区，启动后仍需验证实际环境。', fixable: true },
@@ -140,7 +140,7 @@ export async function repairEnvironment(browser: BrowserId, ids: CheckId[], cons
     }
     const changes: RepairRecord['changes'] = [{ target: 'demo', pointer: id, before: previous, after }];
     if (id === 'timezone') {
-      const afterOffset = { ...previousOffset, status: offset === -480 ? 'warning' as const : 'healthy' as const, value: timezoneOffsetLabel(offset) };
+      const afterOffset = { ...previousOffset, status: 'healthy' as const, fixable: false, value: timezoneOffsetLabel(offset) };
       for (const state of Object.values(demos)) Object.assign(state.checks.find(c => c.id === 'offset')!, afterOffset);
       changes.push({ target: 'demo', pointer: 'offset', before: previousOffset, after: afterOffset });
     }
